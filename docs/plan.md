@@ -479,7 +479,7 @@ def parse_amount(text: str) -> Decimal | None; def parse_date(text) -> date | No
 ```
 
 - `DonutExtractor`: decodificación codiciosa (`num_beams = 1`), `max_length`, fp32 en GPU o CPU según `infer_device` (`p01`: 0,418 s por recibo en GPU; research.md: 3,58 s en CPU). `token2json` propio; una salida que no se puede leer da campos vacíos.
-- **Importes como `Decimal`** con dos decimales, nunca `float` en las reglas: `1.234,56`, `1234,56`, `$ 1.234,56`, `USD 12,00` (AC12).
+- **Importes como `Decimal`** con dos decimales, nunca `float` en las reglas: `1.234,56`, `1234,56`, `$ 1.234,56`, `USD 12,00` (AC12). **Nota del 2026-11-18 (U08)**: el CUIT de ejemplo de AC12 (`30-00001234-5`) no tiene un dígito verificador válido, así que `parse_cuit` lee los once dígitos y no exige el dígito (el QR y el cruce lo comprueban); y el número de orden de compra no cuenta como campo obligatorio de `extraction_incomplete` (sección 11, motivo 4): su ausencia es `no_po` (D45).
 - **El extractor de prueba** (`tests/fixtures/stub_extractor.py`) no vive en `src/`: las pruebas lo registran con `extractors.register("stub", …)`; lee la verdad del accesorio y siembra errores de lectura fijados (una cantidad, un precio, un total, un campo vacío) para probar las reglas. La configuración real nunca lo acepta.
 
 ## 10. Sin fuga de información
