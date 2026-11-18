@@ -1,0 +1,23 @@
+# Research environment for 07-Ecommerce-Invoices-ERP (docs/research.md). Installed in 07-Ecommerce-Invoices-ERP/.venv
+# with Python 3.11.1 on Windows 10, NVIDIA RTX 3090 (24 GB), driver 610.88.
+# Every pin is at least two weeks old on the access date 2026-11-18 (no release from the last two weeks).
+#
+# torch is installed from the PyTorch CUDA 13.0 index, not from PyPI (the PyPI wheel is CPU-only on Windows):
+#   python -m pip install torch==2.14.1 --index-url https://download.pytorch.org/whl/cu130
+torch==2.14.1
+# Donut (naver-clova-ix/donut-base-finetuned-cord-v2), MIT
+transformers==5.22.1
+tokenizers==0.23.3
+sentencepiece==0.2.2
+huggingface-hub==2.4.0
+# Data and images
+numpy==2.4.6
+pandas==2.3.3
+pyarrow==26.0.1
+Pillow==13.0.0
+# QR write and read (script s04). s08 extracts the ARCA specification with pdftotext (Poppler), an external tool
+# that is not pip-installable and is not pinned here.
+qrcode==8.2
+opencv-python-headless==4.14.0.94
+pyzbar==0.1.9
+zss==1.2.0  # tree edit distance for the TED-based accuracy (s02); released 2018, old enough
