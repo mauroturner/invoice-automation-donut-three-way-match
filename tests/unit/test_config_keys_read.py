@@ -6,8 +6,8 @@ What it accepts as a read: an attribute access ``.name`` in a module (not ``conf
 a dictionary), that also names the key's section, as an attribute (``view.model``) or as a name (``model``). A key inside a table (``synth.scan_profiles.clean``) counts as read when its table is
 (``asdict(synth.scan_profiles)``). The generic serializers (``registry``, ``synth.master.to_jsonable``) walk every field and read none by name, so they never count.
 
-The keys that are **not fingerprinted** and have no reader yet are the ones of the units that come later (the services, the site, the outputs); ``NOT_READ_YET`` names each with its unit, and fails when
-one of them is read, so the list is only ever shorter.
+The keys that are **not fingerprinted** and have no reader yet are the ones of the units that come later; ``NOT_READ_YET`` names each with its unit, and fails when one of them is read, so the
+list is only ever shorter. It is empty since U20.
 """
 
 from __future__ import annotations
@@ -21,7 +21,7 @@ SRC = Path(__file__).resolve().parents[2] / "src" / "invoiceflow"
 GENERIC = {"config.py"}
 # keys whose only reader is a library or a service by name, not an attribute of the configuration object (each one with its reader)
 READ_ELSEWHERE: dict[str, str] = {}
-NOT_READ_YET: dict[str, str] = {"service.host": "U20 (api.py, serve)", "service.port": "U20", "service.token_env": "U20"}
+NOT_READ_YET: dict[str, str] = {}      # U20 gave the three keys of [service] their reader (api.py reads token_env; cli.py serve reads host and port)
 
 
 def module_names() -> dict[str, tuple[set[str], set[str]]]:

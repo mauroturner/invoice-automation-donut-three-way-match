@@ -4,11 +4,14 @@ configuration changing something or being declared informative. The runs are the
 from __future__ import annotations
 
 import dataclasses
+import os
 import subprocess
 import sys
 import threading
+from contextlib import contextmanager
 from datetime import date, timedelta
 from pathlib import Path
+from unittest import mock
 
 import pytest
 
@@ -113,11 +116,61 @@ def case_docs_sync(state, tmp_path):
     assert result.code == 0 and "viejo" not in text and "C01" in text and text.endswith("fin\n") and cli("docs-sync", "--config", config_of(state)).out.strip() == "README.md ya estaba al día"
 
 
+@contextmanager
+def serving(token: str | None = "t0ken"):
+    """``uvicorn.run`` replaced by a spy (no socket is opened) and the token of the API in the environment (or, with ``token=None``, out of it)."""
+    with mock.patch("uvicorn.run") as run, mock.patch.dict(os.environ):
+        os.environ.pop("INVOICEFLOW_API_TOKEN", None)
+        if token is not None:
+            os.environ["INVOICEFLOW_API_TOKEN"] = token
+        yield run
+
+
+def case_serve(state, tmp_path):
+    """``serve`` hands uvicorn the application with the host and the port of the options or, without them, of ``[service]``; it listens on 127.0.0.1 only; it writes nothing."""
+    config = config_of(state)
+    other = Path(config).with_name("other.toml")
+    other.write_text('extends = "test.toml"\n\n[service]\nhost = "0.0.0.0"\nport = 8123\ntoken_env = "INVOICEFLOW_API_TOKEN"\n', encoding="utf-8", newline="\n")
+    before = tree(state)
+    with serving() as run:                                  # --config: the port (and the host) of the file
+        assert cli("serve", "--config", config).code == 0 and run.call_args.kwargs["port"] == 8000 and run.call_args.kwargs["host"] == "127.0.0.1"
+        assert cli("serve").code == 0 and run.call_args.kwargs["port"] == 8000
+        refused = cli("serve", "--config", str(other))
+        assert refused.code == 2 and "0.0.0.0" in refused.err and "127.0.0.1" in refused.err and run.call_count == 2, "the file asks for a host that is not the local one: refused, nothing started"
+    with serving() as run:                                  # --host: the one local address; the file's other host is overridden, any other host is refused before anything is loaded
+        accepted = cli("serve", "--config", str(other), "--host", "127.0.0.1", "--port", "8124")
+        assert accepted.code == 0 and run.call_args.kwargs["host"] == "127.0.0.1" and run.call_args.kwargs["port"] == 8124
+        for host in ("0.0.0.0", "localhost", "::1", "192.168.0.10", "127.0.0.2", ""):
+            refused = cli("serve", "--host", host, "--config", str(tmp_path / "does-not-exist.toml"))
+            assert refused.code == 2 and "127.0.0.1" in refused.err and "No se escribió nada" in refused.err and "does-not-exist" not in refused.err, host
+        assert run.call_count == 1
+    with serving() as run:                                  # --port: the number, between 1 and 65535, over the one of the file
+        assert cli("serve", "--config", str(other), "--host", "127.0.0.1").code == 0 and run.call_args.kwargs["port"] == 8123
+        assert cli("serve", "--port", "65535").code == 0 and run.call_args.kwargs["port"] == 65535 and cli("serve", "--port", "1").code == 0 and run.call_args.kwargs["port"] == 1
+        calls = run.call_count
+        for port in ("0", "-1", "65536", "99999"):
+            refused = cli("serve", "--port", port)
+            assert refused.code == 2 and "1" in refused.err and "65535" in refused.err, port
+        assert run.call_count == calls
+    with serving() as run:                                  # --verbose: what uvicorn says
+        assert cli("serve").code == 0 and run.call_args.kwargs["log_level"] == "warning"
+        assert cli("serve", "-v").code == 0 and run.call_args.kwargs["log_level"] == "info"
+    with serving(None) as run:                              # no token: it does not start
+        refused = cli("serve", "--config", config)
+        assert refused.code == 2 and "INVOICEFLOW_API_TOKEN" in refused.err and run.call_count == 0
+    with serving() as run:                                  # the application is the API's, with the token of the environment
+        cli("serve", "--config", config)
+        app = run.call_args.args[0]
+        assert type(app).__name__ == "FastAPI" and {r.path for r in app.routes} >= {"/runs", "/health"}
+    assert tree(state) == before, "serve writes nothing"
+
+
 CASES = {
     "run --run-key": case_run_key, "run --only": case_only, "run --from": case_from, "run --verbose": case_verbose, "run --config": case_config,
     "replay --until": case_until, "replay --config": case_config, "replay --verbose": case_verbose,
     "task task": case_task, "task --run-key": case_task, "task --config": case_config, "task --verbose": case_verbose,
     "synth-sample output": case_synth_sample, "synth-sample --split": case_synth_sample, "synth-sample --n": case_synth_sample, "synth-sample --config": case_config, "synth-sample --verbose": case_verbose,
+    "serve --config": case_serve, "serve --host": case_serve, "serve --port": case_serve, "serve --verbose": case_serve,
     "make-fixture output": case_make_fixture, "figures --config": case_figures, "figures --verbose": case_verbose, "docs-sync --config": case_docs_sync, "docs-sync --verbose": case_verbose,
 }
 # the options that several commands share are the same option: it is shown once, by its case, where it can be seen to change a result
@@ -227,7 +280,7 @@ def test_a_held_lock_or_the_test_asked_for_before_the_seal_exit_2_and_write_noth
 
 def test_module_entry_point_runs_from_another_directory(tmp_path):
     result = subprocess.run([sys.executable, "-m", "invoiceflow", "--help"], cwd=tmp_path, capture_output=True, text=True, env={**__import__("os").environ, "PYTHONPATH": str(PROJECT_ROOT / "src")}, timeout=120)
-    assert result.returncode == 0 and "replay" in result.stdout and "make-fixture" in result.stdout and "torch" not in result.stderr.lower()
+    assert result.returncode == 0 and "replay" in result.stdout and "make-fixture" in result.stdout and "serve" in result.stdout and "torch" not in result.stderr.lower()
 
 
 # --- every key of the configuration ----------------------------------------------------------------------------------------------

@@ -2,7 +2,8 @@
 
 ``run``, ``task`` and ``replay`` call ``pipeline.run_all``, ``pipeline.run_task`` and ``pipeline.replay``: the same task list, order and functions as the Airflow DAG and the entry API, so the whole
 flow runs on Windows without Airflow. ``make-fixture`` writes the tiny CORD of the quick mode, ``synth-sample`` writes sample invoices of a validation partition, ``figures`` calls ``figures.write_figures`` and ``docs-sync`` calls
-``reporting.replace_block``: no step is written here. (``serve`` is the unit of the entry API.)
+``reporting.replace_block``: no step is written here. ``serve`` runs the entry API (``api.py``, D27) with uvicorn on 127.0.0.1 only: it has no task and writes nothing; a host that is not the local one,
+a port out of range or a missing token is exit 2 before a server starts.
 
 Exit codes: 0 ok (also a run with no delivery left and a replay with nothing pending), 1 a task failed, 2 wrong usage or configuration (also a task refused by the state of its run, because another
 writer holds the data folder, or the test generated before the seal), 3 the delivery or the source was rejected. A combination that cannot do what it says is refused with 2 before anything is
@@ -29,6 +30,7 @@ SUMMARY_MD = "evaluation_summary.md"
 NOTHING_WRITTEN = "No se escribió nada."
 QUIET_KEYS = ("seconds", "sha256", "peak_working_set_mb", "peak_commit_mb", "peak_gpu_mb", "memory_counter", "message")     # what a line of a task leaves out: it is in the state of the run
 SAMPLE_SPLITS = ("validation_known", "validation_new")
+LOOPBACK_HOST = "127.0.0.1"             # the only interface ``serve`` listens on (D27)
 
 
 class _UsageError(ValueError):
@@ -79,6 +81,13 @@ def build_parser(task_ids: tuple[str, ...] | None = None) -> argparse.ArgumentPa
                                   description="Escribe en SALIDA_DIR/cord los tres Parquet del CORD diminuto con el esquema real y en SALIDA_DIR/arca un reemplazo de la especificación del QR de ARCA: "
                                               "lo que el modo rápido lee en data/quick (con SALIDA_DIR = data/quick).")
     fixture.add_argument("output", type=Path, metavar="SALIDA_DIR", help="la carpeta donde se escriben (data/quick para el modo rápido); una ruta relativa se toma desde $INVOICEFLOW_HOME o, sin él, desde la carpeta del proyecto")
+
+    serve = commands.add_parser("serve", parents=[common], help=f"levanta la API de entrada en {LOOPBACK_HOST} (POST /runs corre la siguiente entrega; GET /runs/CLAVE, /runs/CLAVE/review y /health), con token",
+                                description="Sirve la API de entrada con FastAPI y uvicorn: POST /runs corre la siguiente entrega con el mismo bloqueo que la CLI y el DAG (otro escritor: 409); GET /runs/CLAVE y "
+                                            "/runs/CLAVE/review leen la corrida y su cola de revisión. Cada pedido lleva Authorization: Bearer con el token de la variable de entorno que dice [service] token_env. "
+                                            "Solo escucha en la interfaz local.")
+    serve.add_argument("--host", metavar="DIRECCIÓN", help=f"interfaz en la que escucha: solo {LOOPBACK_HOST} (por defecto el [service] host de la configuración, que tampoco puede ser otro); otra sale con 2 antes de cargar nada")
+    serve.add_argument("--port", type=int, metavar="N", help="puerto, de 1 a 65535 (por defecto el [service] port de la configuración)")
 
     commands.add_parser("figures", parents=[common], help="dibuja las figuras de la documentación desde los archivos del sitio verificados de la última corrida")
     docs_sync = f"copia el resumen de resultados (reports/{SUMMARY_MD}) en el bloque de resultados del README"
@@ -247,6 +256,33 @@ def _execute(args: argparse.Namespace, cfg, pipeline) -> int:
     return EXIT_OK
 
 
+def _serve(args: argparse.Namespace) -> int:
+    """``serve``: the refusals that need nothing loaded (the host and the port), then the configuration (whose host must be the local one too), then the application (without a token it does not
+    start), then the server. Nothing is written."""
+    try:
+        if args.host is not None and args.host != LOOPBACK_HOST:
+            raise _UsageError(f"--host {args.host!r}: la API solo escucha en {LOOPBACK_HOST} (D27); en Docker la sirve el servicio api del compose, en su red interna. {NOTHING_WRITTEN}")
+        if args.port is not None and not 1 <= args.port <= 65535:
+            raise _UsageError(f"--port {args.port}: se esperaba un puerto de 1 a 65535. {NOTHING_WRITTEN}")
+        cfg = load_config(args.config)
+        host = LOOPBACK_HOST if args.host is not None else cfg.service.host
+        if host != LOOPBACK_HOST:
+            raise _UsageError(f"[service] host = {host!r}: la API solo escucha en {LOOPBACK_HOST} (D27); use --host {LOOPBACK_HOST} o corrija la configuración. {NOTHING_WRITTEN}")
+        from invoiceflow.api import ApiStartError, create_app      # the API, its libraries and the pipeline are loaded only here
+
+        try:
+            app = create_app(cfg)
+        except ApiStartError as error:
+            raise _UsageError(f"{error}. {NOTHING_WRITTEN}") from error
+    except (_UsageError, ValueError, FileNotFoundError) as error:
+        _fail(f"error: {error}")
+        return EXIT_USAGE
+    import uvicorn
+
+    uvicorn.run(app, host=host, port=cfg.service.port if args.port is None else args.port, log_level="info" if args.verbose else "warning")
+    return EXIT_OK
+
+
 def _command_of(argv: list[str]) -> str | None:
     return next((a for a in argv if not a.startswith("-")), None)
 
@@ -263,6 +299,8 @@ def main(argv: list[str] | None = None) -> int:
     except SystemExit as stop:   # argparse exits on a wrong option (2) and on --help (0)
         return int(stop.code or 0)
     _configure_logging(getattr(args, "verbose", False))
+    if args.command == "serve":
+        return _serve(args)
     if args.command == "make-fixture":
         try:
             return _make_fixture(args)
