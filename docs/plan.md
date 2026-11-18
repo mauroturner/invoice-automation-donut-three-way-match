@@ -2,7 +2,7 @@
 
 Fecha: 2026-11-18. Lee primero `requirements.md` (RF, RNF, AC y los criterios C01-C10) y `decisions.md` (D01-D43). Este plan dice cómo construirlo; si un detalle no está aquí ni allí, la decisión vuelve a quien planifica: no se adivina. Las suposiciones se marcan como **[Supuesto]** y lo que hay que comprobar antes de escribir código, como **[Verificar]**.
 
-Convenciones: documentación en español neutro; código, identificadores, tablas y columnas en inglés; medidas DAX, títulos de visuales y textos del sitio en español. Comandos para Windows (PowerShell) y el `.venv` del proyecto; rutas relativas a `07-Ecommerce-Invoices-ERP/`. **El paquete se llama `invoiceflow`** (variables de entorno `INVOICEFLOW_*`, flujo de n8n `invoice-intake`, proyecto de Docker Compose `invoiceflow`) y **el alcance de los commits es `invoices-erp`** (el de la investigación, `a6c5774`; por ejemplo `feat(invoices-erp): …`, `test(invoices-erp): …`; D40). Cuando este plan dice «como el proyecto 06», el código de referencia es el de `06-Ecommerce-Promotion-Lift/` en su último commit corregido (`38a6c56`, con la documentación de `97f61cd`), que se adapta y se copia, no se importa.
+Convenciones: documentación en español neutro; código, identificadores, tablas y columnas en inglés; medidas DAX, títulos de visuales y textos del sitio en español. Comandos para Windows (PowerShell) y el `.venv` del proyecto; rutas relativas a `07-Ecommerce-Invoices-ERP/`. **El paquete se llama `invoiceflow`** (variables de entorno `INVOICEFLOW_*`, DAG de Airflow `invoiceflow_daily`, proyecto de Docker Compose `invoiceflow-airflow`) y **el alcance de los commits es `invoices-erp`** (el de la investigación, `a6c5774`; por ejemplo `feat(invoices-erp): …`, `test(invoices-erp): …`; D40). Cuando este plan dice «como el proyecto 06», el código de referencia es el de `06-Ecommerce-Promotion-Lift/` en su último commit corregido (`38a6c56`, con la documentación de `97f61cd`), que se adapta y se copia, no se importa.
 
 **Datos sintéticos**: toda factura, orden, remito, proveedor, CUIT y CAE de este proyecto lo genera `invoiceflow.synth` y lo dice (D05). Cada cifra que sale de ellos lleva «(sintético)» en los textos y `synthetic: true` en los JSON.
 
@@ -16,9 +16,9 @@ flowchart LR
     GEN[invoiceflow.synth<br/>maestro, facturas sintéticas y su verdad]
   end
   subgraph Orquestación
-    N8N[n8n en Docker<br/>flujo invoice-intake]
-    API[API de entrada FastAPI<br/>POST /runs]
-    CLI[CLI python -m invoiceflow run / replay<br/>Windows]
+    AF[Airflow 3.4 en Docker<br/>DAG invoiceflow_daily]
+    API[API de entrada FastAPI<br/>POST /runs, a pedido]
+    CLI[CLI python -m invoiceflow run / replay<br/>Windows, sin Airflow]
   end
   subgraph Tareas["invoiceflow.pipeline.TASKS (funciones Python, un solo escritor)"]
     T1[fetch_source] --> T2[deliver] --> T3[validate] --> T4[load] --> T5[fit_model] --> T6[extract] --> T7[read_qr] --> T8[match] --> T9[post] --> T10[evaluate] --> T11[export] --> T12[render_dashboard] --> T13[report]
@@ -36,7 +36,8 @@ flowchart LR
     HTML[dashboard/powerbi-design.html]
     REP[reports/*.json, *.md, model_seal.json]
   end
-  N8N -->|HTTP| API --> Tareas
+  AF --> Tareas
+  API --> Tareas
   CLI --> Tareas
   CORD --> T1
   SPEC --> T1
@@ -62,8 +63,8 @@ flowchart LR
 
 Principios (los de los proyectos 01 a 06, más los de sus evaluaciones):
 
-- Cada tarea es una función `fn(ctx: RunContext) -> dict` sin dependencias del orquestador. La API de entrada, que llama n8n, y la CLI recorren la misma tupla `TASKS`.
-- **Un solo escritor**: todo comando que escribe toma `data/interim/pipeline.lock` antes de su primera escritura (D29); la API de entrada responde 409 si el bloqueo está tomado.
+- Cada tarea es una función `fn(ctx: RunContext) -> dict` sin dependencias del orquestador. El DAG de Airflow, la API de entrada y la CLI recorren la misma tupla `TASKS` con las mismas funciones (D26).
+- **Un solo escritor**: todo comando que escribe toma `data/interim/pipeline.lock` antes de su primera escritura (D29); la API de entrada responde 409 si el bloqueo está tomado y el DAG de Airflow falla sin escribir (`RunLockedError`, sin reintentos).
 - Toda salida versionada se escribe a un temporal, se sincroniza y se renombra con `os.replace`; los conjuntos de archivos llevan un manifiesto escrito al final.
 - **La factura manda**: el grano de lo que se carga, se lee, se decide y se emite es la factura; los campos leídos son filas (factura × campo).
 - **La verdad está aparte** (D23): `data/interim/truth/` solo la abre `truth.read_truth`, y solo la llaman `evaluation.py` y `baselines.py`; cualquier otro llamador lanza `LeakageError`.
@@ -83,7 +84,7 @@ Principios (los de los proyectos 01 a 06, más los de sus evaluaciones):
   requirements-ml.txt         # -r requirements.txt, torch, transformers, tokenizers, sentencepiece, huggingface-hub, safetensors, zss
   requirements-dev.txt        # -r requirements-ml.txt, pytest, httpx
   requirements-research.txt   # el de la investigación (ya versionado)
-  .gitignore                  # data/raw/, data/interim/, data/warehouse/, data/models/, data/erp/, data/quick/, docker/.env, reports/validation/history/
+  .gitignore                  # data/raw/, data/interim/, data/warehouse/, data/models/, data/erp/, data/quick/, airflow/logs/, airflow/config/, airflow/plugins/, airflow/.env, reports/validation/history/
   .dockerignore               # solo requirements*.txt, src/, sql/, config/ entran al contexto de la imagen
   config/
     pipeline.toml             # configuración completa (sección 4)
@@ -102,9 +103,10 @@ Principios (los de los proyectos 01 a 06, más los de sus evaluaciones):
     registry.py  launch.py  daily.py  baselines.py  metrics.py  evaluation.py  reporting.py
     export.py  site_export.py  figures.py  api.py
     dashboard/__init__.py  dashboard/semantic_model.py  dashboard/render.py  dashboard/svg.py
-  n8n/workflows/invoice-intake.json
-  docker/
+  airflow/
     Dockerfile  docker-compose.yaml  .env.example  init.sh
+    dags/invoiceflow_daily.py
+  docker/
     erpnext/compose.yaml      # la pila de ERPNext v15 para la prueba de humo (marca erpnext)
   research/                   # s00-s08 de research.md y research/plan/p01-p03 (ya versionados)
   dashboard/powerbi-design.html          # generado (versionado)
@@ -602,7 +604,7 @@ GET  /runs/{run_key}/review   -> la cola de revisión de la corrida (claves, mot
 GET  /health                  -> {"status": "ok", "sealed": bool}
 ```
 
-`create_app(cfg)` lee la configuración y el token del entorno (`service.token_env`); sin token, la aplicación no arranca. Cada pedido sin `Authorization: Bearer <token>` o con otro es 401 (`hmac.compare_digest`); los errores son `{"code": …}` sin rutas ni trazas; `python -m invoiceflow serve` se niega a otro host que `127.0.0.1` y a un puerto fuera de 1-65535 (salida 2), como el proyecto 05; en Docker escucha en la red interna del compose, sin puertos publicados salvo `127.0.0.1:5678` de n8n.
+`create_app(cfg)` lee la configuración y el token del entorno (`service.token_env`); sin token, la aplicación no arranca. Cada pedido sin `Authorization: Bearer <token>` o con otro es 401 (`hmac.compare_digest`); los errores son `{"code": …}` sin rutas ni trazas; `python -m invoiceflow serve` se niega a otro host que `127.0.0.1` y a un puerto fuera de 1-65535 (salida 2), como el proyecto 05; en Docker escucha en la red interna del compose, sin puertos publicados salvo `127.0.0.1:8080` de la interfaz de Airflow. **Quién la llama** (D26): el DAG de Airflow no pasa por ella, llama a `pipeline.run_task` directo; la API es la entrada para una corrida a pedido, de una persona o de otro programa (por ejemplo el disparador por correo, que no se construye: plan, sección 29, ítem 4), y toma el mismo bloqueo que el DAG, así que una corrida a pedido mientras corre la diaria recibe 409 y no escribe.
 
 ## 19. Salidas: modelo estrella
 
@@ -721,9 +723,9 @@ TASKS: tuple[TaskSpec, ...] = (
 
 **Un solo escritor** (`lock.py`, D29): el de los proyectos 05 y 06 tal cual, con `INVOICEFLOW_*`, incluida la corrección A6 del 06 (las carpetas vacías que creó se quitan y se vuelven a crear si otra liberación las quitó).
 
-**n8n** (`n8n/workflows/invoice-intake.json`; D26): nodos «Cada día hábil, 07:00» (Schedule Trigger, `0 7 * * 1-5`), «A mano» (Manual Trigger), «Correr la entrega» (HTTP Request `POST {API}/runs` con la credencial «invoiceflow-api» de tipo Header Auth), «¿Hay facturas para revisar?» (IF `review > 0`), «Traer la revisión» (HTTP Request `GET {API}/runs/{{run_key}}/review`), «Avisar a cuentas a pagar» (Send Email, **desactivado**: pendiente del dueño) y «Correo con facturas» (Email Trigger IMAP, **desactivado**: pendiente del dueño). La credencial no está en el repositorio: `docker/init.sh` la arma desde el entorno y la importa con `n8n import:credentials` **[Verificar en U21 la versión de n8n de al menos 14 días, su resumen, `import:workflow`, `import:credentials` y cómo ejecutar el flujo desde la CLI (`n8n execute --id`) o, si esa versión no lo trae, con un nodo Webhook de prueba con autenticación por encabezado]**.
+**DAG** `airflow/dags/invoiceflow_daily.py` (Airflow 3: `from airflow.sdk import DAG, task`; D26): `dag_id="invoiceflow_daily"`, `schedule="0 7 * * 1-5"` (días hábiles, como el horario que el plan proponía para el disparador diario), `start_date` 2026-11-01 UTC, `catchup=False`, `max_active_runs=1`, `max_active_tasks=1`, `tags=["invoiceflow"]`; una tarea por `TaskSpec`, `@task.short_circuit` para `deliver`. Cada tarea llama a `pipeline.run_task(task_id, run_id)`, la misma función que usan la CLI y la API de entrada; un `ValidationError`, un `SourceError`, un `LeakageError` y un `RunRefusedError` fallan con `AirflowFailException`, sin reintentos. La corrida a mano es el disparo manual de Airflow. El DAG no llama a la API de entrada (sección 18 dice quién la llama).
 
-**Docker** (`docker/`, D26): `Dockerfile` del servicio `FROM python:3.11-slim-bookworm@sha256:<resumen>` con `apt-get install --no-install-recommends libzbar0=<versión>` (la biblioteca nativa de pyzbar en Linux; D07), torch de CPU desde `https://download.pytorch.org/whl/cpu` y `requirements-ml.txt`; usuario sin privilegios. `docker-compose.yaml` (`name: invoiceflow`): `api` (el servicio, `INVOICEFLOW_CONFIG`, `INVOICEFLOW_HOME=/opt/invoiceflow`), `erp` (el sustituto con `uvicorn`), `n8n` (`n8nio/n8n:<versión>@sha256:<resumen>`, puerto `127.0.0.1:5678`, `N8N_ENCRYPTION_KEY`, `N8N_DIAGNOSTICS_ENABLED=false`, `N8N_PERSONALIZATION_ENABLED=false`); cada secreto con `${VAR:?}`; `src/`, `sql/`, `config/`, `n8n/` y `data/raw/` en solo lectura; `init.sh` con `set -euo pipefail`. La prueba `tests/e2e/test_n8n_docker.py` (marca `docker`): genera claves de usar y tirar, escribe el modo rápido, construye, corre `pip check` en la imagen (por su código de salida), importa el flujo y lo ejecuta dos veces (el lanzamiento rápido y la primera diaria), comprueba que la segunda no cargó nada dos veces en el ERP, baja los servicios con `--volumes`, borra lo que creó y compara los listados de Docker antes y después.
+**Docker** (`airflow/`, D26): como el proyecto 06 (D24), con `INVOICEFLOW_*`. `Dockerfile` `FROM apache/airflow:3.4.0@sha256:a8d9d19c563c768b2bc605ef26440f28a9164ea886064e99c599b057432ff572` (el resumen que fijaron los proyectos 04 a 06) **[Verificar en U21 en `06-Ecommerce-Promotion-Lift/airflow/Dockerfile`]**, con `apt-get install --no-install-recommends libzbar0=<versión>` como root (la biblioteca nativa de pyzbar en Linux; D07), después `USER airflow`, torch de CPU desde `https://download.pytorch.org/whl/cpu` y `requirements-ml.txt` junto con `apache-airflow==3.4.0`; contexto = la carpeta del proyecto con `.dockerignore`. `docker-compose.yaml` (`name: invoiceflow-airflow`, imagen `invoiceflow-airflow:3.4.0`) copiado del corregido del proyecto 06: LocalExecutor, PostgreSQL con versión y resumen, la interfaz solo en `127.0.0.1:8080`, `src/`, `sql/`, `config/` y `data/raw/` montados de solo lectura en `/opt/invoiceflow`, `PYTHONPATH=/opt/invoiceflow/src`, `INVOICEFLOW_HOME=/opt/invoiceflow` e `INVOICEFLOW_CONFIG`; más dos servicios de la misma imagen en la red interna, `erp` (el sustituto con `uvicorn`, el único que escribe `data/erp/standin.sqlite` en Docker; el DAG lo usa con `erp.mode = "http"`) y `api` (la API de entrada, a pedido). Cada secreto sin valor por defecto y con `${VAR:?}`: `INVOICEFLOW_DB_PASSWORD` (también en la cadena de conexión), `INVOICEFLOW_FERNET_KEY`, `INVOICEFLOW_JWT_SECRET`, `INVOICEFLOW_ADMIN_PASSWORD`, `INVOICEFLOW_API_TOKEN` e `INVOICEFLOW_ERP_TOKEN`; `init.sh` con `set -euo pipefail`; `.env.example` lista las claves vacías y cómo generarlas. Memoria del contenedor del trabajador ≥ RNF03 **[Verificar en U21 el límite de Docker Desktop del equipo]**. La prueba `tests/e2e/test_airflow_docker.py` (marca `docker`): genera claves de usar y tirar, escribe el modo rápido en `data/quick/`, construye, corre `pip check` en la imagen (por su código de salida) y `airflow dags test invoiceflow_daily` dos veces con `INVOICEFLOW_CONFIG=/opt/invoiceflow/config/pipeline.quick.toml` (el lanzamiento rápido y la primera diaria, con el sustituto del modo rápido en el mismo proceso), comprueba que el artefacto y el sello no cambiaron entre las dos y que la segunda no cargó nada dos veces en el ERP, baja los servicios con `--volumes`, borra lo que creó y compara los listados de Docker antes y después.
 
 **CLI** (`cli.py`, `__main__.py`):
 
@@ -829,12 +831,12 @@ El proyecto 06 pasó de 75,8 s a 125 s en tres unidades (las del flujo completo 
 | U15 | 10 | `replayed`: tres diarias y el cierre una vez por sesión, y la prueba de 1 y 5 días |
 | U16-U17 | 8 | Exportación, HTML y figuras sobre `replayed` |
 | U18-U19 | 15 | Rechazos sobre copias de estados, bloqueo con procesos aparte, CLI y modo rápido aislado |
-| U20-U21 | 5 | API de entrada; compose y flujo de n8n estáticos |
+| U20-U21 | 5 | API de entrada; compose y DAG de Airflow estáticos |
 | U22-U23 | 3 | Pruebas de la documentación |
 | **Total previsto** | **92** | **[Supuesto]**; el presupuesto deja unos 28 s de margen |
 
 - **Pruebas lentas, con nombre y marca `slow`**: `launched` (unos 6 s), `replayed` (unos 8 s), `tests/integration/test_daily.py::test_decisions_are_identical_with_one_day_and_five_day_deliveries` (unos 5 s), `tests/e2e/test_quick_mode.py::test_quick_replay_from_other_cwd_touches_only_data_quick` (unos 10 s), `tests/e2e/test_cli.py::test_module_entry_point_runs_from_another_directory` (el único proceso aparte con torch: unos 5 s).
-- **Fuera de la suite por defecto**: `tests/e2e/test_real.py` (`real_data`, `model`, `gpu`), `tests/e2e/test_n8n_docker.py` (`docker`) y `tests/e2e/test_erpnext_smoke.py` (`erpnext`).
+- **Fuera de la suite por defecto**: `tests/e2e/test_real.py` (`real_data`, `model`, `gpu`), `tests/e2e/test_airflow_docker.py` (`docker`) y `tests/e2e/test_erpnext_smoke.py` (`erpnext`).
 - **Nada por proceso aparte cuando la sesión lo tiene**: la CLI y el modo rápido con `cli.main(argv)` y `monkeypatch.chdir`; la sesión corre sin `os.fsync` salvo las pruebas que tratan del vaciado (la unidad de velocidad del 06).
 - **`pytest-xdist` no se fija** (D32).
 
@@ -877,7 +879,7 @@ Las de los proyectos 01 a 06 que aplican aquí, más las nuevas:
 | El resumen después del sello dice pendiente lo sellado | 03 B3 | `tests/integration/test_summary_after_seal.py::test_a_warehouse_without_sealed_rows_takes_the_sealed_result_from_the_seal` | AC24 |
 | Un servicio que escucha afuera o sin token | 05 (API) | `tests/integration/test_api.py::test_every_request_without_the_token_is_401_and_no_error_carries_a_path`, `tests/unit/test_serve.py::test_serve_refuses_any_host_but_localhost` | AC16, AC34 |
 | Un compose con un secreto literal, o una inicialización que sigue tras fallar | 02 A6, 03 | `tests/unit/test_compose.py::test_no_literal_secret`, `::test_the_init_script_stops_at_the_first_failure` | AC35 |
-| La prueba de Docker deja su imagen | 04 A13 | `tests/e2e/test_n8n_docker.py::test_the_workflow_runs_twice_in_quick_mode_and_leaves_nothing_behind` | AC35 |
+| La prueba de Docker deja su imagen | 04 A13 | `tests/e2e/test_airflow_docker.py::test_dags_test_twice_in_quick_mode_and_leaves_nothing_behind` | AC35 |
 | `pip check` juzgado por un texto | 05 R3 | `tests/unit/test_dependencies.py::test_pip_check_is_judged_by_its_exit_code` | AC38 |
 | Una dependencia directa sin fijar o sin documentar | 03 B6 | `tests/unit/test_dependencies.py::test_every_direct_import_is_a_pinned_requirement_and_documented` | AC38 |
 | Un conjunto de archivos mezclado o una regla acumulada sumada | 03 D94, 05 R4-001 | `tests/contract/test_site_export.py::test_a_failure_in_the_middle_of_the_writes_leaves_a_set_that_is_refused`, `::test_cumulative_rules_are_read_once_from_the_latest_loaded_run` | AC28 |
@@ -914,9 +916,9 @@ README con estos títulos de segundo nivel y en este orden (AC39), como los proy
 ## Fuente y licencia
 ```
 
-«Los datos» cuenta lo que CORD trae y lo que no (sin proveedor, CUIT, fecha ni moneda), por qué las facturas son sintéticas y cómo se generan (rango de CUIT, leyenda, diseños reservados), con la figura de una factura sintética de ejemplo. «Cómo correrlo de punta a punta» empieza por bajar CORD y la especificación (runbook R1), instalar torch desde el índice de PyTorch y sigue con las pruebas, el modo rápido, la corrida real, n8n en Docker y las figuras.
+«Los datos» cuenta lo que CORD trae y lo que no (sin proveedor, CUIT, fecha ni moneda), por qué las facturas son sintéticas y cómo se generan (rango de CUIT, leyenda, diseños reservados), con la figura de una factura sintética de ejemplo. «Cómo correrlo de punta a punta» empieza por bajar CORD y la especificación (runbook R1), instalar torch desde el índice de PyTorch y sigue con las pruebas, el modo rápido, la corrida real, Airflow en Docker y las figuras.
 
-En `docs/`: `data-dictionary.md` (los campos de CORD que se usan, el esquema de la tarea de factura, los 13 campos del QR, la verdad sintética, las clases sembradas, los motivos, y una tabla por Parquet generada con `docs-sync`), `model-card.md` (uso previsto: leer facturas de proveedores con un diseño conocido para que cuentas a pagar revise solo lo que no cierra; uso no previsto: cargar sin revisión facturas de diseños nuevos, o leer los resultados sintéticos como los de una empresa real; datos; el ajuste y su elección; el QR; el cruce y sus tolerancias; criterios y resultados; limitaciones: datos sintéticos de un generador propio, un solo tipo de comprobante, sin facturas reales, CORD indonesio, la posible fuga del checkpoint; tiempos y memoria con el contador; la suite), `decisions.md`, `runbook.md` (R1 falta una fuente o no coincide; R2 una regla de lectura de CORD falló; R3 entrega rechazada o archivos en cuarentena; R4 entregas fuera de orden; R5 el ajuste no puede correr (sin CUDA, memoria de la GPU, `ModelChoiceError`, M06); R6 el artefacto no coincide; R7 la evaluación no reproduce el sello; R8 el bloqueo; R9 el ERP no responde o rechaza (sustituto, ERPNext, token); R10 n8n o Docker no arrancan; R11 reconstruir desde cero con el sello; R12 empezar un análisis nuevo: otras tolerancias, otro generador, borrar el sello), `paso-a-paso.md`, `review-advisories.md`, `evaluation.md` y `figures/` (`example_invoice.png` de una factura sintética de validación, `cord_fields.png`, `choice.png`, `field_recall.png`, `qr_read.png`, `reasons.png`, `baselines.png`, `daily_ops.png`, con matplotlib desde los archivos del sitio verificados y la imagen de ejemplo del generador).
+En `docs/`: `data-dictionary.md` (los campos de CORD que se usan, el esquema de la tarea de factura, los 13 campos del QR, la verdad sintética, las clases sembradas, los motivos, y una tabla por Parquet generada con `docs-sync`), `model-card.md` (uso previsto: leer facturas de proveedores con un diseño conocido para que cuentas a pagar revise solo lo que no cierra; uso no previsto: cargar sin revisión facturas de diseños nuevos, o leer los resultados sintéticos como los de una empresa real; datos; el ajuste y su elección; el QR; el cruce y sus tolerancias; criterios y resultados; limitaciones: datos sintéticos de un generador propio, un solo tipo de comprobante, sin facturas reales, CORD indonesio, la posible fuga del checkpoint; tiempos y memoria con el contador; la suite), `decisions.md`, `runbook.md` (R1 falta una fuente o no coincide; R2 una regla de lectura de CORD falló; R3 entrega rechazada o archivos en cuarentena; R4 entregas fuera de orden; R5 el ajuste no puede correr (sin CUDA, memoria de la GPU, `ModelChoiceError`, M06); R6 el artefacto no coincide; R7 la evaluación no reproduce el sello; R8 el bloqueo; R9 el ERP no responde o rechaza (sustituto, ERPNext, token); R10 Airflow o Docker no arrancan; R11 reconstruir desde cero con el sello; R12 empezar un análisis nuevo: otras tolerancias, otro generador, borrar el sello), `paso-a-paso.md`, `review-advisories.md`, `evaluation.md` y `figures/` (`example_invoice.png` de una factura sintética de validación, `cord_fields.png`, `choice.png`, `field_recall.png`, `qr_read.png`, `reasons.png`, `baselines.png`, `daily_ops.png`, con matplotlib desde los archivos del sitio verificados y la imagen de ejemplo del generador).
 
 ## 26. «Con IA, de punta a punta», contado como fue
 
@@ -955,11 +957,11 @@ Cada unidad termina con su RED observada, sus pruebas en verde (`$env:PYTHONPATH
 | U18 Exportación para el sitio y figuras | `site_export.py`, `figures.py`, la prueba de lo publicado | `tests/contract/test_site_export.py::test_every_synthetic_figure_is_labelled`, `tests/integration/test_published_bytes.py::test_every_cuit_in_published_bytes_is_synthetic` y `::test_published_files_carry_no_local_path` | AC28 | ~420 | **Ítem 3**: commit solo |
 | U19 Bloqueo, tareas, estado, CLI y modo rápido | `lock.py`, `pipeline.py`, `sysinfo.py`, `cli.py`, `__main__.py` | `tests/unit/test_lock.py::test_a_second_writer_is_refused_with_exit_2_and_writes_nothing`, `tests/integration/test_pipeline.py::test_closed_run_refuses_every_task_and_keeps_its_records`, `tests/e2e/test_cli.py::test_every_config_key_changes_the_result_or_is_declared_informative` y `tests/e2e/test_quick_mode.py::test_quick_replay_from_other_cwd_touches_only_data_quick` | AC29-AC33 | ~520 | **Ítem 4**: commit solo |
 | U20 API de entrada | `api.py`, `serve` | `tests/integration/test_api.py::test_every_request_without_the_token_is_401_and_no_error_carries_a_path` y `::test_a_second_run_while_one_holds_the_lock_is_409` | AC34 | ~280 | **Ítem 2**: commit solo |
-| U21 n8n y Docker | el flujo de n8n, `Dockerfile`, compose, `init.sh`, `.env.example`, pruebas estáticas y de Docker | `tests/unit/test_compose.py::test_no_literal_secret`, `::test_the_init_script_stops_at_the_first_failure` y `tests/unit/test_workflow.py::test_the_workflow_calls_only_the_api_and_its_email_nodes_are_disabled` | AC35 | ~380 | **Ítems 5 y 2**: commit solo |
+| U21 Airflow y Docker | el DAG `invoiceflow_daily`, `Dockerfile`, compose con todos los secretos del entorno, `init.sh`, `.env.example`, pruebas estáticas y de Docker | `tests/unit/test_compose.py::test_no_literal_secret_including_the_metadata_db_password`, `::test_the_init_script_stops_at_the_first_failure` y `tests/unit/test_dag.py::test_tasks_match_cli_order` | AC35 | ~380 | **Ítems 5 y 2**: commit solo |
 | U22 Corrida real y prueba de humo de ERPNext | `replay` con la GPU; outputs, sello, figuras; tiempos y memoria contra RNF02 y RNF03; `-m docker`; `-m erpnext` una vez. **Dos commits**: lo escrito a mano (pruebas, notas, D) y, aparte, lo generado | `tests/e2e/test_real.py::test_real_counts_seal_and_summary_consistency`, `::test_every_daily_run_takes_at_most_the_required_seconds` y `tests/e2e/test_erpnext_smoke.py::test_two_invoices_post_as_drafts_read_back_and_do_not_duplicate` | AC03, AC36, AC37, AC40 (medición) | ~260 + generados | **Ítem 1**: commits solos |
 | U23 Documentación | README, `model-card.md`, `data-dictionary.md`, `runbook.md`, `paso-a-paso.md`, `review-advisories.md`, las filas del 07 en `SITE-UPDATES.md` (sección 30) y en `LANDING-EXPANSION.md` (D34) | `tests/docs/test_docs.py::test_readme_headings_in_order_and_results_block_matches_summary`, `::test_every_decision_has_seven_fields`, `::test_every_synthetic_figure_in_the_docs_says_so` y `::test_every_test_named_in_the_plan_exists` | AC22, AC39 | ~520 | — |
 
-**Pronóstico**: unas 9.400 líneas escritas a mano en 23 unidades (≈ 4.600 de código y SQL, ≈ 3.900 de pruebas, ≈ 900 de Markdown), más lo generado (Parquet, el HTML, menos de 200 KB de JSON, el flujo de n8n) **[Supuesto]**. Calibración honesta: el proyecto 05 pronosticó 9.100 con un rango de 9.000 a 14.000; el 06, 8.600 con uno de 8.500 a 13.000. El rango realista de este es de 9.000 a 14.000: el generador, el ajuste en GPU, n8n y el ERP son terreno nuevo para el portafolio.
+**Pronóstico**: unas 9.400 líneas escritas a mano en 23 unidades (≈ 4.600 de código y SQL, ≈ 3.900 de pruebas, ≈ 900 de Markdown), más lo generado (Parquet, el HTML, menos de 200 KB de JSON) **[Supuesto]**. Calibración honesta: el proyecto 05 pronosticó 9.100 con un rango de 9.000 a 14.000; el 06, 8.600 con uno de 8.500 a 13.000. El rango realista de este es de 9.000 a 14.000: el generador, el ajuste en GPU y el ERP son terreno nuevo para el portafolio.
 
 **Orden**: U01 → U23, en ese orden. U05-U06 (generador) y U07-U08 (QR, bandeja, normalización) tienen superficies disjuntas, pero U07 necesita el texto del QR de U06 y cada una pesa menos de lo que justifica escritores paralelos. U09 y U10 van antes de U14 (el lanzamiento usa el ajuste). U12 y U13 van antes de U15. U19 va después de las tareas que envuelve. U22 va después de todo el código: es la primera vez que se genera la prueba sintética y que se abre la prueba de CORD.
 
@@ -974,7 +976,7 @@ Cada unidad termina con su RED observada, sus pruebas en verde (`$env:PYTHONPATH
 5. **La página del sitio** con la estructura del proyecto 01 (S10), en marca-personal, para `invoices-erp` (`src/i18n/projects/invoices-erp.ts`, español e inglés; slug `facturas-al-erp`):
    - **Título (h1)** que nombra el problema: cada factura se carga a mano, una por una.
    - **Lede** con los veredictos reales, también los «no cumple», y la palabra «sintético».
-   - **Resumen en cinco líneas**: Problema (tipear y cruzar cada factura a mano); Solución (leer con un modelo de documentos, anclar con el QR, cruzar en tres vías y cargar solo lo que cierra); Algoritmos (Donut ajustado, QR de ARCA, reglas de dos y tres vías); Resultados (de `summary.json`); Automatización (n8n que llama al flujo cada día).
+   - **Resumen en cinco líneas**: Problema (tipear y cruzar cada factura a mano); Solución (leer con un modelo de documentos, anclar con el QR, cruzar en tres vías y cargar solo lo que cierra); Algoritmos (Donut ajustado, QR de ARCA, reglas de dos y tres vías); Resultados (de `summary.json`); Automatización (Airflow que corre el flujo cada día hábil).
    - **Datasets**, con `data.json`: CORD y lo que no trae; las facturas sintéticas y cómo se generan; los 13 campos del QR.
    - **Algoritmos**, como una historia con una visualización, con `algorithms.json`: el checkpoint sin ajustar no lee una factura; ajustado, sí (por campo y por diseño); el QR ancla la cabecera; el cruce de tres vías ataja lo que el total no ve (B1 frente al flujo).
    - **Producto final**, con `operation.json` y `validation_rules.json`: los 20 días con un selector, las excepciones por motivo, la carga en el ERP, la factura sintética de ejemplo con sus campos leídos, la **captura de la primera página** del HTML y el **botón del `.pbix` deshabilitado**.
@@ -988,7 +990,7 @@ Ninguno bloquea la construcción; cada uno tiene un valor por defecto decidido.
 1. **La homologación de ARCA** (D04): con un certificado y un CUIT de homologación del Espacio de diálogo se podría pedir CAE de prueba por WSFEv1 y comparar el QR propio con el que arma ARCA en «Comprobantes en línea». Por defecto, todo es local.
 2. **Las tolerancias del cruce** (D14): 2 % del precio unitario, 0 de exceso sobre lo recibido, 0,01 de redondeo por línea. Cambiarlas es antes de U22; después, un análisis posterior al sello.
 3. **Cargar sin QR** (D06): por defecto nunca; si el dueño lo quiere, `require_qr = false` con su propio sello.
-4. **El correo**: el disparador de n8n por correo y el aviso a cuentas a pagar quedan desactivados; conectarlos necesita un buzón y sus credenciales.
+4. **El correo**: el disparador por correo y el aviso a cuentas a pagar no se construyen (con Airflow serían un sensor de IMAP o un llamado a la API de entrada, D26); conectarlos necesita un buzón y sus credenciales.
 5. **Un ERP real**: la prueba de humo con ERPNext la corre el proyecto una vez si la pila levanta; conectar un ERPNext u Odoo propio necesita su URL y sus claves. Verificar la API externa de Odoo Community en una instalación propia (research.md).
 6. **El rango de CUIT** (D05): se supone que nadie tiene un CUIT `30-0000xxxx-d` (el ejemplo de ARCA está ahí); el dueño puede confirmarlo con una consulta pública de constancia por muestreo. El proyecto no hace consultas.
 7. **El texto del sitio** (sección 30), incluidas las correcciones de hechos.
@@ -1013,13 +1015,13 @@ El texto vive en marca-personal, `src/i18n/projects/invoices-erp.ts`; cada fila 
 | 4 | Resumen (`summary`) | «…recibos públicos anotados, en indonesio, y facturas de prueba en formato ARCA.» | «…recibos públicos anotados, en indonesio, y facturas sintéticas en formato ARCA, generadas para el proyecto, con sus órdenes de compra y remitos.» | D04, D05 |
 | 5 | Algoritmos 1, texto y herramientas | «Un modelo abierto como Donut… o docTR saca primero el texto; los dos… se ajustan con los recibos anotados.» y `Python, Donut, docTR` | «Donut lee la imagen y devuelve los campos ya ordenados; se ajusta con los recibos anotados y con facturas sintéticas en formato argentino, porque los recibos no traen proveedor, CUIT, fecha ni moneda.» y `Python, Donut` (docTR no se usó) | research.md, contradicción 5; D09 |
 | 6 | Algoritmos 2 | «Decodifica el QR de la factura ARCA… y lo usa para controlar lo que leyó el modelo.» | Mantener y agregar: «…si no hay QR o no se lee, la factura va a revisión.» | D06 |
-| 7 | Producto, «Automatización» | «Cada correo con una factura dispara un flujo que la lee, la valida y la carga en un ERP de código abierto, como ERPNext u Odoo Community.» y `n8n, APIs REST` | «Cada día un flujo en n8n toma las facturas que llegaron, las lee, las cruza y carga las que cierran en un ERP con la API de ERPNext (un sustituto local, probado también contra ERPNext real). La entrada por correo queda lista para conectarse a un buzón.»; mantener las herramientas | D16, D26; pendiente 4 |
+| 7 | Producto, «Automatización» | «Cada correo con una factura dispara un flujo que la lee, la valida y la carga en un ERP de código abierto, como ERPNext u Odoo Community.» y `n8n, APIs REST` | «Cada día hábil un flujo en Airflow toma las facturas que llegaron, las lee, las cruza y carga las que cierran en un ERP con la API de ERPNext (un sustituto local, probado también contra ERPNext real). La entrada por correo no está construida: queda como trabajo futuro.» y las herramientas `Airflow, APIs REST` (el sitio cambia n8n por Airflow, como los proyectos 01 a 06) | D16, D26; pendiente 4 |
 | 8 | Producto, «Modelo en uso», herramientas | `Python, RAG` | `Python, Donut` (no hay RAG: el cruce es una regla explícita) | D15 |
-| 9 | n8n (si el texto se amplía) | — | No llamarlo «de código abierto»: su licencia es la Sustainable Use License | research.md, contradicción 7 |
+| 9 | n8n (si algún texto lo conserva) | — | No llamarlo «de código abierto»: su licencia es la Sustainable Use License; con la fila 7 deja de ser una herramienta del proyecto | research.md, contradicción 7; D26 |
 | 10 | Producto, «Tablero» | «Facturas procesadas, excepciones por motivo y tiempo de carga, día por día.» | «Facturas procesadas, cargadas solas y a revisión por motivo, y segundos de procesamiento por factura, día por día. Se entregan las tablas y el diseño del tablero; el `.pbix` se arma a mano.» | D37; S4 |
 | 11 | Introducción (`lede`) | «…Este proyecto arma un flujo que lee cada factura, la cruza con la orden de compra, la carga sola y deja para revisar solo las que no cierran.» | Mantener y agregar «con el remito» (tres vías) y el resultado de U22 con la palabra «sintéticas» | D15, D19 |
 | 12 | Resultados (lede, Resumen y Algoritmos) | Sin resultados | Los veredictos de U22 tal como salgan; si se cumple lo esperado (requerimientos, sección 8.1): «sobre facturas sintéticas, el modelo ajustado lee bien los diseños conocidos y el flujo carga solo lo que cierra, sin cargas malas; con un diseño nuevo, la lectura baja y van más facturas a revisión» | D19 |
 | 13 | Algoritmos 3 | «Compara proveedor, renglones e importes con la orden de compra…» | «Compara proveedor, renglones, precios y cantidades con la orden de compra y con lo recibido en el remito (coincidencia de tres vías), con tolerancias explícitas…» y la cifra de C08 | D14, D15 |
 | 14 | Datasets (sección nueva) | — | Lo que CORD trae y no trae, y cómo se generan las facturas sintéticas (rango de CUIT, leyenda, diseños reservados para la prueba) | `data.json` |
-| 15 | Descripción para buscadores (`seo.description`) | «…se leen con un modelo de documentos y se cargan al ERP con n8n.» | «…facturas sintéticas en formato ARCA leídas con Donut, ancladas con el QR, cruzadas con la orden y el remito y cargadas al ERP con n8n.» | D09, D26 |
+| 15 | Descripción para buscadores (`seo.description`) | «…se leen con un modelo de documentos y se cargan al ERP con n8n.» | «…facturas sintéticas en formato ARCA leídas con Donut, ancladas con el QR, cruzadas con la orden y el remito y cargadas al ERP con Airflow.» | D09, D26 |
 | 16 | Algoritmos (la cifra del artículo) | — | No citar el 90,9 % de Donut en CORD hasta confirmarlo en el PDF; si se muestra, junto a la propia con su definición | D43 |

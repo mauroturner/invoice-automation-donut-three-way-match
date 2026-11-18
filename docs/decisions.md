@@ -74,7 +74,7 @@ Estados: **vigente**, **pendiente del dueño**, **reemplazada por Dxx**.
 - **Opciones**: (a) solo pyzbar; (b) solo Aruco; (c) pyzbar y, si no devuelve nada, Aruco.
 - **Decisión**: (c), con el orden en `[qr] readers` y el lector que leyó guardado en `qr_reads.reader`; el `Dockerfile` instala `libzbar0` con su versión fijada.
 - **Motivo**: pyzbar lee más en todo lo medido; Aruco cuesta poco como respaldo y no se probó que nunca lea lo que pyzbar no lee, así que C10 lo informa. Lo que más decide es el tamaño impreso y la resolución, y por eso el generador los sortea y la verdad los guarda (plan, sección 7.2).
-- **Afecta**: `qr.py`; `docker/Dockerfile`; AC08; `fact_qr_read`.
+- **Afecta**: `qr.py`; `airflow/Dockerfile`; AC08; `fact_qr_read`.
 - **Quién**: agente de planificación.
 - **Estado**: vigente.
 
@@ -258,22 +258,22 @@ Estados: **vigente**, **pendiente del dueño**, **reemplazada por Dxx**.
 - **Quién**: agente de planificación.
 - **Estado**: vigente.
 
-## D26 Orquestación: n8n en Docker que llama a un servicio local que corre la misma tupla de tareas que la CLI
+## D26 Orquestación: Airflow 3.4.0 en Docker con un DAG que corre la misma tupla de tareas que la CLI, como los proyectos 01 a 06
 
-- **Contexto**: el sitio dice que «cada correo con una factura dispara un flujo» con n8n y APIs REST (S9); el landing declara n8n (S5). S10 leyó la estructura del proyecto 01 como «un DAG de Airflow probado en Docker», con el supuesto de que la estructura se reusa y no las herramientas puntuales. La licencia de n8n es la Sustainable Use License, gratuita para uso propio (S7) y no de código abierto (research.md).
-- **Opciones**: (a) Airflow, como los proyectos 01 a 06; (b) n8n con un disparador diario y uno manual que llama por HTTP a una API de entrada (FastAPI) que corre la tupla `TASKS`; el disparador por correo, diseñado y desactivado; (c) n8n con el nodo de ejecutar comandos.
-- **Decisión**: (b). La CLI de Windows corre la misma tupla. La prueba de Docker importa el flujo y lo ejecuta dos veces en modo rápido (plan, sección 22).
-- **Motivo**: (a) contradiría la página sin necesidad; (b) es fiel al sitio y deja la lógica en Python, donde se prueba; (c) depende de un nodo que las versiones recientes desactivan por defecto **[Verificar en U21]** y mezcla la orquestación con el entorno. Volver a Airflow es barato: la tupla no depende del orquestador. Es una lectura de S10 que el dueño puede corregir.
-- **Afecta**: `n8n/`, `api.py`, `docker/`; RF24, RF25; AC34, AC35; el sitio (fila 7).
-- **Quién**: agente de planificación.
-- **Estado**: vigente; la lectura de S10, para revisión del dueño.
+- **Contexto**: el plan había propuesto n8n en Docker llamando a una API local, porque el sitio dice que «cada correo con una factura dispara un flujo» con n8n y APIs REST (S9) y el landing declara n8n (S5). S10 leyó la estructura del proyecto 01 como «un DAG de Airflow probado en Docker». La licencia de n8n es la Sustainable Use License, gratuita para uso propio (S7) y no de código abierto (research.md). El plan dejó la elección al dueño con dos opciones: «1) n8n en Docker que llama a un servicio local con las mismas tareas que la CLI (lo que propone el plan; coincide con el sitio). 2) Airflow en Docker, como P1-P6 (consistente con S10; el sitio cambia n8n por Airflow).» El proyecto 06 (D24) ya tiene el DAG, el compose y `init.sh` probados con `airflow dags test` en Docker.
+- **Opciones**: (a) Airflow, como los proyectos 01 a 06: un DAG con una tarea por `TaskSpec` que llama a `pipeline.run_task`; (b) n8n con un disparador diario y uno manual que llama por HTTP a una API de entrada (FastAPI) que corre la tupla `TASKS`; (c) n8n con el nodo de ejecutar comandos.
+- **Decisión**: (a), **decidida por el dueño el 2026-11-18** (registro L94 del documento de seguimiento): «2 Airflow (como P1-P6)». El DAG `invoiceflow_daily` (`airflow/dags/invoiceflow_daily.py`, `schedule="0 7 * * 1-5"`, `max_active_runs=1`, una tarea por `TaskSpec`, sin reintentos ante `ValidationError`, `SourceError`, `LeakageError` y `RunRefusedError`) llama a `pipeline.run_task`, como el DAG del proyecto 06; la CLI de Windows corre la misma tupla sin Airflow. La prueba de Docker corre `airflow dags test invoiceflow_daily` dos veces en modo rápido (plan, sección 22). **La API de entrada de U20 se queda** (D27): no es el orquestador sino la entrada para una corrida a pedido, de una persona o de otro programa, con el mismo bloqueo; el DAG no la llama (el plan anterior hacía de n8n su único llamador; ahora no tiene un llamador fijo y la entrada por correo, que la llamaría, no se construye). El flujo del correo y el aviso a cuentas a pagar quedan fuera de alcance (plan, sección 29, ítem 4). Las filas del sitio que decían n8n (plan, sección 30, filas 7, 9 y 15) pasan a decir Airflow.
+- **Motivo**: la elección es del dueño; (a) reusa lo que tres revisiones del portafolio ya pasaron (imagen por su resumen, compose con todos los secretos del entorno, `init.sh` con `set -euo pipefail`), deja la lógica en Python, donde se prueba, y elimina un servicio y una licencia que explicar; el costo es que el sitio cambia n8n por Airflow y que el horario del DAG no tiene el disparo por correo que el sitio prometía, dicho en `SITE-UPDATES.md`. La tupla no depende del orquestador, así que volver a n8n seguiría siendo barato.
+- **Afecta**: `airflow/`, `api.py`, `docker/erpnext/`; RF24, RF25; AC34, AC35; D27, D29; plan, secciones 1, 2, 18, 22, 27 (U21), 29 (ítem 4) y 30 (filas 7, 9 y 15); el sitio.
+- **Quién**: el dueño, el 2026-11-18, por la pregunta del plan; reescrita por el agente de construcción.
+- **Estado**: vigente; reemplaza la propuesta de n8n del agente de planificación.
 
 ## D27 Servicios locales: la API de entrada y el sustituto del ERP solo en `127.0.0.1` o en la red interna, con un token del entorno
 
 - **Contexto**: el proyecto 05 construyó una API local de solo lectura con sus guardas (D27 del 05). Aquí la API escribe (corre una entrega) y el sustituto recibe cargas.
 - **Opciones**: (a) sin autenticación porque es local; (b) token del entorno comparado con `hmac.compare_digest`, 401 sin él, `serve` solo en `127.0.0.1`, en Docker solo en la red interna, errores sin rutas ni trazas, y 409 si el bloqueo está tomado.
 - **Decisión**: (b).
-- **Motivo**: un servicio que escribe y que otro programa (n8n) llama necesita saber quién llama; el costo es una variable de entorno.
+- **Motivo**: un servicio que escribe y que otro programa (una persona o, si algún día se construye, el disparador por correo; D26) llama necesita saber quién llama; el costo es una variable de entorno.
 - **Afecta**: `api.py`, `erp/standin.py`; RF24; RNF11; AC16, AC34.
 - **Quién**: agente de planificación.
 - **Estado**: vigente.
@@ -292,8 +292,8 @@ Estados: **vigente**, **pendiente del dueño**, **reemplazada por Dxx**.
 
 - **Contexto**: el bloqueo del 05, con la corrección A6 del 06 (quitar las carpetas vacías que creó), pasó tres evaluaciones.
 - **Opciones**: un solo camino: copiarlo con `INVOICEFLOW_*`.
-- **Decisión**: `lock.py` del 06; la API de entrada lo toma en cada `POST /runs`.
-- **Motivo**: n8n puede disparar dos veces (el manual y el diario); el bloqueo hace que la segunda reciba 409 sin escribir.
+- **Decisión**: `lock.py` del 06; la API de entrada lo toma en cada `POST /runs` y el DAG de Airflow lo toma por la misma función `run_task`.
+- **Motivo**: una corrida a pedido por la API de entrada puede coincidir con la diaria del DAG (o dos disparos del DAG); el bloqueo hace que la segunda reciba 409 (la API) o falle sin escribir (el DAG), y nunca escriben dos a la vez.
 - **Afecta**: `lock.py`, `api.py`; AC31, AC34.
 - **Quién**: agente de planificación.
 - **Estado**: vigente.
@@ -330,7 +330,7 @@ Estados: **vigente**, **pendiente del dueño**, **reemplazada por Dxx**.
 
 ## D33 Contradicciones con el sitio: el QR, los campos, docTR, RAG, el ERP y el correo
 
-- **Contexto**: research.md encontró cuatro afirmaciones que no se sostienen (el QR en cada factura ARCA de prueba, los campos atribuidos a CORD, el ajuste con los recibos que enseñaría toda la factura, la licencia de n8n si se amplía el texto); este plan agrega docTR (no se usa), RAG (no hay), el ERP (un sustituto con la API de ERPNext y una prueba de humo) y el correo (desactivado).
+- **Contexto**: research.md encontró cuatro afirmaciones que no se sostienen (el QR en cada factura ARCA de prueba, los campos atribuidos a CORD, el ajuste con los recibos que enseñaría toda la factura, la licencia de n8n, que deja de importar si el sitio pasa a Airflow; D26); este plan agrega docTR (no se usa), RAG (no hay), el ERP (un sustituto con la API de ERPNext y una prueba de humo) y el correo (desactivado).
 - **Opciones**: (a) dejar el sitio como está; (b) proponer cada cambio con su motivo en `SITE-UPDATES.md` (plan, sección 30) para que el dueño decida.
 - **Decisión**: (b), 16 filas.
 - **Motivo**: S9; el texto es del dueño (research.md, pregunta 7).
@@ -340,7 +340,7 @@ Estados: **vigente**, **pendiente del dueño**, **reemplazada por Dxx**.
 
 ## D34 Tecnologías fuera del landing: PyTorch, Transformers, Pillow, qrcode, pyzbar con ZBar, OpenCV, zss y pypdf
 
-- **Contexto**: el landing declara Python, pandas, SQL, Docker, n8n, REST APIs, FastAPI, TensorFlow, ERPs y Power BI (S5); `LANDING-EXPANSION.md` ya tiene NumPy, SQLite, pyarrow, matplotlib, pytest, pydantic, uvicorn y httpx. Donut está en el sitio como herramienta del proyecto, pero corre sobre PyTorch, no sobre TensorFlow.
+- **Contexto**: el landing declara Python, pandas, SQL, Docker, Apache Airflow, REST APIs, FastAPI, TensorFlow, ERPs y Power BI (S5); `LANDING-EXPANSION.md` ya tiene NumPy, SQLite, pyarrow, matplotlib, pytest, pydantic, uvicorn y httpx. Donut está en el sitio como herramienta del proyecto, pero corre sobre PyTorch, no sobre TensorFlow.
 - **Opciones**: (a) buscar una versión de Donut en TensorFlow; (b) usar PyTorch y anotar cada librería nueva con el 07.
 - **Decisión**: (b): PyTorch (el ajuste y la lectura), Hugging Face Transformers con tokenizers, sentencepiece, huggingface-hub y safetensors (Donut), Pillow (dibujo y lectura de imágenes), qrcode (generar el QR), pyzbar con ZBar y OpenCV (leerlo), zss (la distancia de árbol de la métrica) y pypdf (la imagen del PDF). U23 escribe las filas; las ya anotadas suman el 07.
 - **Motivo**: el checkpoint publicado es de PyTorch; reimplementarlo en TensorFlow sería otro proyecto.
@@ -354,7 +354,7 @@ Estados: **vigente**, **pendiente del dueño**, **reemplazada por Dxx**.
 - **Opciones**: (a) un solo archivo; (b) `requirements.txt` (flujo y servicios sin torch), `requirements-ml.txt` (más torch y Donut) y `requirements-dev.txt` (más pytest y httpx), con torch instalado antes desde el índice de PyTorch (CUDA en Windows, CPU en Docker) y fijado con `==` para que pip lo encuentre.
 - **Decisión**: (b), con las versiones de arriba; pypdf y cualquier dependencia transitiva nueva se fijan en U01 con al menos 14 días en PyPI **[Verificar en U01]**.
 - **Motivo**: torch no se instala igual en los dos entornos; separar los archivos deja la regla «cada import es una dependencia fijada» comprobable en los dos.
-- **Afecta**: `requirements*.txt`; `docker/Dockerfile`; AC38; runbook R1.
+- **Afecta**: `requirements*.txt`; `airflow/Dockerfile`; AC38; runbook R1.
 - **Quién**: agente de planificación.
 - **Estado**: vigente. **Nota del 2026-11-18 (U01)**: tres hechos. **(1) `[Verificar]` de torch resuelto**: `pip install --dry-run -r requirements-dev.txt` sobre el `.venv` no reemplaza nada, porque `torch==2.14.1` coincide con la versión pública de la rueda `2.14.1+cu130`. **(2) `httpx` es una dependencia de ejecución, no de desarrollo**: `erp/client.py` (U13) lo importa y la prueba de dependencias de U01 exige que todo lo que importan `src/` y `research/` sea un pin directo de `requirements.txt` o de `requirements-ml.txt`; el esbozo de la sección 2 del plan lo ponía en `requirements-dev.txt`. **(3) Regla de los 14 días**: pypdf queda en 6.21.4 (subida el 2026-10-28; 7.0.0 es del 2026-11-06). El entorno de la investigación traía varias transitivas con menos de 14 días y U01 las bajó a la versión más nueva que ya los tenía: pydantic 2.14.3 → 2.14.2 con pydantic-core 2.50.2, click 8.5.1 → 8.5.0, annotated-doc 0.0.7 → 0.0.5, typing-inspection 0.4.5 → 0.4.4, httpx2 y httpcore2 2.16.2 → 2.16.0, markdown-it-py 4.3.0 → 4.2.0, regex 2026.11.18 → 2026.9.29 y typer 0.29.2 → 0.27.3 (`pip check` limpio por su código de salida y los imports de Donut siguen funcionando). Ningún pin de `requirements-research.txt` cambió. `huggingface-hub` 2.4.0 trae `httpx2` (no `httpx`): los dos paquetes conviven y `starlette` 1.10 prefiere `httpx2` para su cliente de prueba (el 05 filtraba el aviso; aquí se decide en U13).
 
@@ -402,7 +402,7 @@ Estados: **vigente**, **pendiente del dueño**, **reemplazada por Dxx**.
 
 - **Contexto**: los proyectos usan un paquete corto (`promolift`) y el alcance de la investigación (`invoices-erp`, `a6c5774`).
 - **Opciones**: un solo camino razonable.
-- **Decisión**: `invoiceflow`, `INVOICEFLOW_*`, flujo de n8n `invoice-intake`, proyecto de Compose `invoiceflow`, alcance `invoices-erp`; documentación en español neutro, código en inglés.
+- **Decisión**: `invoiceflow`, `INVOICEFLOW_*`, DAG de Airflow `invoiceflow_daily` (era el flujo de n8n `invoice-intake`; D26), proyecto de Compose `invoiceflow-airflow`, alcance `invoices-erp`; documentación en español neutro, código en inglés.
 - **Motivo**: consistencia con los proyectos 01 a 06.
 - **Afecta**: todo.
 - **Quién**: agente de planificación.
