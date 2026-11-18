@@ -24,6 +24,7 @@ import hashlib
 import json
 import logging
 import math
+import re
 import sqlite3
 import statistics
 from dataclasses import dataclass
@@ -52,6 +53,10 @@ ENVELOPE = ("schema_version", "run_key", "as_of", "artifact_sha256", "cord_commi
 # Every table of the star model the export reads: the one list ``_require_star`` checks before anything is built (a test compares it with the tables the queries of this module name).
 REQUIRED_STAR = ("star_fact_baseline", "star_fact_cord_eval", "star_fact_field_read", "star_fact_invoice", "star_fact_qr_read")
 STATUS_WORST_FIRST = ("fail", "warn", "pass")
+SMOKE_FILE = "erpnext_smoke.json"          # what the smoke test against ERPNext leaves in the reports folder (U22, AC36); ``operation.smoke_erpnext`` is its content
+SMOKE_KEYS = ("synthetic", "image", "image_digest", "erpnext_version", "frappe_version", "tested_on", "documents", "readback_equal", "repost_creates_none", "duplicate_bill_no")
+_SMOKE_DIGEST = re.compile(r"sha256:[0-9a-f]{64}")
+_LOCAL_PATH = re.compile(r"[A-Za-z]:[\\/]|/(?:home|Users)/|\\Users\\")
 CORD_NOTE_ES = ("La prueba de CORD (recibos reales) se abre una sola vez, en el cierre. El checkpoint publicado ya se había medido sobre ella en la investigación (D42): esa cifra no es una medida "
                 "independiente del ajuste.")
 CUIT_RANGE_ES = "30-0000xxxx-d: el rango del ejemplo de la especificación de ARCA; ninguna factura sintética lleva el CUIT de una empresa"
@@ -367,6 +372,23 @@ def _read_checked(out_dir: Path) -> tuple[dict[str, bytes], dict[str, Any], list
             problems.append(f"{name} no lleva el envoltorio de {MANIFEST_FILE} (la corrida, el instante o la fuente son otros)")
         out[name] = data
     return out, manifest, problems
+
+
+def read_smoke(path: Path) -> dict[str, Any] | None:
+    """The result the smoke test left at `path`, or None when there is no file (the test was not run: ``smoke_erpnext`` is ``null``). A file that is not exactly that object, whose figures are not
+    labelled synthetic, whose digest is not a SHA-256 or that names a path of this machine is a ``SiteExportError``: a result is published whole or not at all."""
+    path = Path(path)
+    if not path.exists():
+        return None
+    try:
+        text = path.read_text(encoding="utf-8")
+        document = json.loads(text)
+    except (OSError, ValueError) as error:
+        raise SiteExportError(f"{path.name} no se puede leer como JSON ({type(error).__name__})") from None
+    if not (isinstance(document, dict) and set(document) == set(SMOKE_KEYS) and document["synthetic"] is True and isinstance(document["image_digest"], str)
+            and _SMOKE_DIGEST.fullmatch(document["image_digest"]) and not _LOCAL_PATH.search(text)):
+        raise SiteExportError(f"{path.name} no es el resultado de la prueba de humo de ERPNext: se esperan exactamente las claves {list(SMOKE_KEYS)}, con synthetic verdadero, la huella de la imagen y sin rutas")
+    return document
 
 
 def read_site(out_dir: Path) -> SiteFiles:

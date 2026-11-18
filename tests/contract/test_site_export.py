@@ -275,3 +275,30 @@ def test_the_cap_is_a_boundary_the_total_itself_fits_and_one_byte_less_does_not(
     with pytest.raises(SiteExportError, match="el tope es"):
         export_site(state.conn, tmp_path / "short", state.run, state.view, seal_path=state.seal, max_total_bytes=total - 1, cord_index=site_files.cord_index, expected_rows={"train": 16, "validation": 4, "test": 4})
     assert not (tmp_path / "short").exists() or not list((tmp_path / "short").iterdir())
+
+
+SMOKE = {"synthetic": True, "image": "frappe/erpnext:v15.124.4", "image_digest": "sha256:" + "a" * 64, "erpnext_version": "15.99.0", "frappe_version": "15.99.0", "tested_on": "2026-11-18",
+         "documents": {"suppliers": 1, "items": 2, "orders": 1, "receipts": 1, "invoices": 2}, "readback_equal": True, "repost_creates_none": True,
+         "duplicate_bill_no": {"default_settings_creates_a_duplicate": True, "status_with_uniqueness_on": 417}}
+
+
+def test_the_smoke_result_of_erpnext_is_read_from_its_file_strictly_and_is_none_without_it(tmp_path):
+    """U22 (AC36; plan section 21): ``operation.smoke_erpnext`` is the result the smoke test left in ``reports/erpnext_smoke.json``; no file is ``null``; a file that is not exactly that shape is refused by
+    name, never published half-read."""
+    path = tmp_path / "erpnext_smoke.json"
+    assert site_export.read_smoke(path) is None
+    path.write_text(json.dumps(SMOKE), encoding="utf-8")
+    assert site_export.read_smoke(path) == SMOKE
+    for broken in ("{not json", "[]", json.dumps({**SMOKE, "extra": 1}), json.dumps({k: v for k, v in SMOKE.items() if k != "image"}), json.dumps({**SMOKE, "synthetic": False}),
+                   json.dumps({**SMOKE, "image_digest": "sha256:short"}), json.dumps({**SMOKE, "image": "C:/Users/someone/erpnext"})):
+        path.write_text(broken, encoding="utf-8")
+        with pytest.raises(SiteExportError, match="erpnext_smoke"):
+            site_export.read_smoke(path)
+
+
+def test_the_site_carries_the_smoke_result_it_is_given(star_export, tmp_path):
+    """The five files say what the smoke test found, labelled synthetic like every figure that is not CORD's; without it the field stays null (``test_the_five_files...`` checks the default)."""
+    out = tmp_path / "site"
+    state = star_export.state
+    export_site(state.conn, out, state.run, state.view, seal_path=state.seal, max_total_bytes=204800, smoke_erpnext=SMOKE)
+    assert read_site(out).operation["smoke_erpnext"] == SMOKE and verify_site(out) == []

@@ -51,7 +51,7 @@ from invoiceflow.files import write_atomic
 from invoiceflow.intake import FileCheck, load_page
 from invoiceflow.lock import RunLockedError, RunRefusedError, RunStateError, sole_writer
 from invoiceflow.registry import EvaluationRefusedError, RunMeta, SealError, check_test_evaluation, config_fingerprint, read_registry, read_seal, sealed_view
-from invoiceflow.site_export import export_site, export_summary
+from invoiceflow.site_export import SMOKE_FILE, export_site, export_summary, read_smoke
 from invoiceflow.sources import ARCA_KEY, fetch_source as check_and_index_sources
 from invoiceflow.synth.invoices import invoices
 from invoiceflow.synth.master import master as make_master
@@ -647,11 +647,12 @@ def _cord_index(cfg: PipelineConfig):
 def export(ctx: RunContext) -> dict:
     """The star model for Power BI and the five files of the site, as of the instant of the run's delivery."""
     cfg, view, run = ctx.cfg, _view(ctx), _meta(ctx)
+    smoke = read_smoke(Path(cfg.paths.reports_dir) / SMOKE_FILE)        # what the smoke test against ERPNext left (U22), or None
     conn = connect(cfg.paths.warehouse)
     try:
         parquet = export_star_schema(conn, cfg.paths.outputs_dir, MODEL, run, view, seal_path=Path(cfg.paths.seal))
         site = export_site(conn, cfg.paths.site_dir, run, view, seal_path=Path(cfg.paths.seal), max_total_bytes=cfg.site.max_total_bytes, cord_index=_cord_index(cfg),
-                           expected_rows=dataclasses.asdict(cfg.source.expected_rows))
+                           expected_rows=dataclasses.asdict(cfg.source.expected_rows), smoke_erpnext=smoke)
     finally:
         conn.close()
     return {"parquet": len(parquet), "site": len(site)}

@@ -219,6 +219,35 @@ def test_create_invoice_itself_refuses_anything_but_a_draft_before_a_request():
     assert len(seen) == 1 and b'"docstatus":0' in seen[0].content.replace(b" ", b"") and seen[0].headers["authorization"] == "token k:s"
 
 
+def test_a_master_event_sends_what_erpnext_requires_and_returns_the_document_the_erp_made():
+    """U22 (D50, the smoke test against ERPNext v15): a real ERPNext refuses an item with no group, an order with no required-by date and keeps today's date on a receipt unless the posting time is
+    set, and it names every document itself, so the event gives back what the ERP created (its ``name``) for the caller to link to. The stand-in ignores the three fields."""
+    from types import SimpleNamespace
+
+    sent_bodies: list[tuple[str, dict]] = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        import json
+
+        body = json.loads(request.content)
+        sent_bodies.append((request.url.path, body))
+        return httpx.Response(200, json={"data": {**body, "name": f"SERIES-{len(sent_bodies):05d}"}})
+
+    client = ErpClient(httpx.Client(base_url="http://x", transport=httpx.MockTransport(handler)), "k:s")
+    supplier = SimpleNamespace(supplier_key="S", name_es="S (ficticio)", cuit="30000000007")
+    item = SimpleNamespace(code="A1", description_es="A", unit="u", list_price=D("1.00"))
+    lines = (SimpleNamespace(item_code="A1", description_es="A", unit="u", qty=D("5"), unit_price=D("1.00")),)
+    order = SimpleNamespace(po_number="OC-1", supplier_key="S", po_date=date(2026, 9, 1), currency="PES", lines=lines)
+    receipt = SimpleNamespace(receipt_number="REM-1", po_number="OC-1", receipt_date=date(2026, 9, 3), lines=(SimpleNamespace(item_code="A1", qty=D("5")),))
+    made = [client.apply_master_event(e) for e in (ErpEvent("supplier", supplier), ErpEvent("item", item), ErpEvent("po", order), ErpEvent("receipt", receipt, "S"))]
+    assert [m["name"] for m in made] == ["SERIES-00001", "SERIES-00002", "SERIES-00003", "SERIES-00004"], "what the ERP created is what the event returns"
+    by_path = {path.rsplit("/", 1)[1].replace("%20", " "): body for path, body in sent_bodies}
+    assert by_path["Item"]["item_group"] == "Products"
+    assert by_path["Purchase Order"]["schedule_date"] == "2026-09-01" and by_path["Purchase Order"]["transaction_date"] == "2026-09-01"
+    assert by_path["Purchase Receipt"]["set_posting_time"] == 1 and by_path["Purchase Receipt"]["posting_date"] == "2026-09-03"
+    assert "set_posting_time" not in by_path["Supplier"] and "item_group" not in by_path["Supplier"], "each field only on the document that needs it"
+
+
 def test_a_parent_that_matches_a_child_table_filter_once_per_row_is_one_receipt_and_one_invoice():
     """U22, D50 (a): real ERPNext answers a filter on a child table with the parent once for every child row that matches (a receipt of two rows of the same order is listed twice); the stand-in
     lists it once. Counted twice, a receipt would double what was received and let a quantity through, so each document is read and counted once whatever the list says."""

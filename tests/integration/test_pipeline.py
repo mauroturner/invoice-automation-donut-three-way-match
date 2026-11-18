@@ -222,3 +222,32 @@ def test_a_replay_runs_the_pending_deliveries_up_to_the_one_asked_for(pipeline_l
     with pytest.raises(pipeline.UsageError, match="no es una entrega del plan"):
         pipeline.replay(state.cfg, until="D2030-01-01")
     assert stage(state, 0) is state
+
+
+def test_the_export_task_gives_the_site_the_smoke_result_that_is_in_the_reports_folder(quick_cfg, tmp_path, monkeypatch):
+    """U22 (AC36): ``operation.smoke_erpnext`` is the content of ``reports/erpnext_smoke.json`` when the smoke test left it and ``None`` when it did not; a file that is not that shape stops the task
+    (nothing half-read is published)."""
+    from types import SimpleNamespace
+
+    from invoiceflow.site_export import SMOKE_FILE, SiteExportError
+
+    given: dict = {}
+    monkeypatch.setattr(pipeline, "_view", lambda ctx: "view")
+    monkeypatch.setattr(pipeline, "_meta", lambda ctx: "run")
+    monkeypatch.setattr(pipeline, "connect", lambda path: sqlite3.connect(":memory:"))
+    monkeypatch.setattr(pipeline, "_cord_index", lambda cfg: None)
+    monkeypatch.setattr(pipeline, "export_star_schema", lambda *args, **kwargs: [])
+    monkeypatch.setattr(pipeline, "export_site", lambda *args, **kwargs: given.update(kwargs) or [])
+    paths = SimpleNamespace(warehouse=tmp_path / "w.sqlite", outputs_dir=tmp_path / "o", seal=tmp_path / "s.json", site_dir=tmp_path / "site", reports_dir=tmp_path / "reports")
+    ctx = SimpleNamespace(cfg=SimpleNamespace(paths=paths, site=quick_cfg.site, source=quick_cfg.source))
+    paths.reports_dir.mkdir()
+    pipeline.export(ctx)
+    assert given["smoke_erpnext"] is None
+    smoke = {"synthetic": True, "image": "frappe/erpnext:v15.1.0", "image_digest": "sha256:" + "b" * 64, "erpnext_version": "15.1.0", "frappe_version": "15.1.0", "tested_on": "2026-11-18",
+             "documents": {"suppliers": 1}, "readback_equal": True, "repost_creates_none": True, "duplicate_bill_no": {"default_settings_creates_a_duplicate": True, "status_with_uniqueness_on": 417}}
+    (paths.reports_dir / SMOKE_FILE).write_text(json.dumps(smoke), encoding="utf-8")
+    pipeline.export(ctx)
+    assert given["smoke_erpnext"] == smoke
+    (paths.reports_dir / SMOKE_FILE).write_text("{}", encoding="utf-8")
+    with pytest.raises(SiteExportError):
+        pipeline.export(ctx)

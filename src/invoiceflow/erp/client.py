@@ -36,6 +36,7 @@ from invoiceflow.qr import QrPayload
 
 CENT = Decimal("0.01")
 SUPPLIER, ITEM, ORDER, RECEIPT, INVOICE = "Supplier", "Item", "Purchase Order", "Purchase Receipt", "Purchase Invoice"
+ERPNEXT_ITEM_GROUP = "Products"       # a group of the items of ERPNext after its setup wizard (an item needs one: D50)
 POST_STATUSES = ("posted", "already_posted", "post_failed")
 JSON = {"Content-Type": "application/json"}
 ARCA_CURRENCY = {iso: code for code, iso in ISO_CURRENCY.items()}
@@ -216,26 +217,25 @@ class ErpClient:
             return PostOutcome("post_failed", read["name"], False, "read_back", tuple(differences))
         return PostOutcome("already_posted" if existing is not None else "posted", read["name"], True)
 
-    def apply_master_event(self, event: ErpEvent) -> None:
-        """Load one supplier, item, order or receipt of the master (a launch or a daily delivery loads them in the order they happened)."""
+    def apply_master_event(self, event: ErpEvent) -> dict[str, Any]:
+        """Load one supplier, item, order or receipt of the master (a launch or a daily delivery loads them in the order they happened) and return the document the ERP made. Real ERPNext names every
+        document itself (its series), so a caller that links to one uses the returned ``name``; it also needs what the stand-in ignores: an item group, the required-by date of an order and the posting
+        time of a receipt set, or it keeps today's date (D50)."""
         document = event.document
         if event.kind == "supplier":
-            self._request("POST", SUPPLIER, content=_body({"name": document.supplier_key, "supplier_name": document.name_es, "tax_id": document.cuit}),
-                          headers=JSON)
-        elif event.kind == "item":
-            self._request("POST", ITEM, content=_body({"item_code": document.code, "item_name": document.description_es, "stock_uom": document.unit, "standard_rate": document.list_price}),
-                          headers=JSON)
-        elif event.kind == "po":
+            return self._request("POST", SUPPLIER, content=_body({"name": document.supplier_key, "supplier_name": document.name_es, "tax_id": document.cuit}), headers=JSON)
+        if event.kind == "item":
+            return self._request("POST", ITEM, content=_body({"item_code": document.code, "item_name": document.description_es, "item_group": ERPNEXT_ITEM_GROUP, "stock_uom": document.unit,
+                                                              "standard_rate": document.list_price}), headers=JSON)
+        if event.kind == "po":
             rows = [{"item_code": line.item_code, "item_name": line.description_es, "uom": line.unit, "qty": line.qty, "rate": line.unit_price} for line in document.lines]
-            self._request("POST", ORDER, content=_body({"name": document.po_number, "supplier": document.supplier_key, "transaction_date": document.po_date,
-                                                        "currency": ISO_CURRENCY.get(document.currency, document.currency), "docstatus": 1, "items": rows}),
-                          headers=JSON)
-        elif event.kind == "receipt":
+            return self._request("POST", ORDER, content=_body({"name": document.po_number, "supplier": document.supplier_key, "transaction_date": document.po_date, "schedule_date": document.po_date,
+                                                               "currency": ISO_CURRENCY.get(document.currency, document.currency), "docstatus": 1, "items": rows}), headers=JSON)
+        if event.kind == "receipt":
             rows = [{"item_code": line.item_code, "qty": line.qty, "purchase_order": document.po_number} for line in document.lines]
-            self._request("POST", RECEIPT, content=_body({"name": document.receipt_number, "supplier": event.supplier_key, "posting_date": document.receipt_date, "docstatus": 1, "items": rows}),
-                          headers=JSON)
-        else:
-            raise ValueError(f"evento del maestro desconocido: {event.kind!r}")
+            return self._request("POST", RECEIPT, content=_body({"name": document.receipt_number, "supplier": event.supplier_key, "posting_date": document.receipt_date, "set_posting_time": 1,
+                                                                 "docstatus": 1, "items": rows}), headers=JSON)
+        raise ValueError(f"evento del maestro desconocido: {event.kind!r}")
 
 
 # --- the master as events ------------------------------------------------------------------------------------------------------------------
