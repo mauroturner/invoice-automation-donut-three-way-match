@@ -341,7 +341,7 @@ def test_the_seed_of_the_split_picks_the_stream(view, default_master, tmp_path):
 
 
 def test_the_scan_noise_depends_on_the_seed_of_the_split_and_on_the_invoice(quick_view, quick_train):
-    truth = dataclasses.replace(next(t for t in quick_train if t.scan_profile != "clean"), file_format="png")
+    truth = dataclasses.replace(quick_train[0], scan_profile="mild", file_format="png")      # the quick mode draws clean pages only (D56): the profile is the test's
     base = render(truth, quick_view)
     assert render(truth, with_synth(quick_view, seed_train=quick_view.synth.seed_train + 1)) != base, "another seed, another noise"
     assert render(dataclasses.replace(truth, invoice_key="train-99999"), quick_view) != base, "another invoice, another noise"

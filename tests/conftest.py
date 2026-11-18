@@ -227,3 +227,42 @@ def before_the_seal(site_files, tmp_path):
     return conn, seal, state
 
 
+
+
+# --- the pipeline in quick mode: states made once per session (U19) ----------------------------------------------------------------
+
+
+@pytest.fixture(scope="session")
+def quick_launch(tmp_path_factory):
+    """A clean quick clone after its first run, made as a user would: ``make-fixture`` and ``replay --until`` through the command line with ``$INVOICEFLOW_HOME`` on the clone and the working directory
+    elsewhere. ``.state`` is the folder; ``.evidence`` what the quick-mode test reads (the fingerprints before and after)."""
+    from types import SimpleNamespace
+
+    from tests.fixtures.pipeline_state import launched_through_the_cli
+
+    base = tmp_path_factory.mktemp("quick")
+    state, evidence = launched_through_the_cli(base / "clone", base / "elsewhere")
+    state.results.append([])
+    return SimpleNamespace(state=state, evidence=evidence)
+
+
+@pytest.fixture(scope="session")
+def pipeline_launched(quick_launch):
+    """The clean quick clone after its first run: the launch (the tiny model fitted, chosen, registered and sealed)."""
+    return quick_launch.state
+
+
+@pytest.fixture(scope="session")
+def pipeline_before_close(tmp_path_factory, pipeline_launched):
+    """The launch and the three daily runs: the close is the next delivery."""
+    from tests.fixtures.pipeline_state import copy_state, stage
+
+    return stage(copy_state(pipeline_launched, tmp_path_factory.mktemp("pipeline") / "days"), 3)
+
+
+@pytest.fixture(scope="session")
+def pipeline_replayed(tmp_path_factory, pipeline_before_close):
+    """Everything: the launch, the three days and the close (the test evaluated and sealed)."""
+    from tests.fixtures.pipeline_state import copy_state, stage
+
+    return stage(copy_state(pipeline_before_close, tmp_path_factory.mktemp("pipeline") / "closed"), 1)

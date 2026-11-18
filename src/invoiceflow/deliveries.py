@@ -76,3 +76,10 @@ def write_manifest(path: Path, manifest: dict[str, Any]) -> None:
     """Write the manifest atomically with sorted keys; one of another shape is refused and the file is left as it was."""
     _check(manifest, "el manifiesto que se iba a escribir")
     write_atomic(Path(path), json.dumps(manifest, indent=2, sort_keys=True) + "\n")
+
+
+def write_day_truth(path: Path, items: list) -> str:
+    """Write the truth of a day's invoices (``truth.write_truth``) for ``deliver``: the flow modules never import the truth module, so the one that makes a delivery asks this one to write it."""
+    from invoiceflow.truth import write_truth
+
+    return write_truth(path, items)

@@ -37,7 +37,9 @@ n_validation_known = 8
 n_validation_new = 4
 test_per_day_known = 3
 test_per_day_new = 3
-dpi = 50
+dpi = 150                                  # at 50 dpi no reader sees the QR and every quick invoice goes to review (L101); one 4 cm code on a clean page is read at 150 (D56)
+qr_cm = [4.0]
+scan_profiles = { clean = 1.0, mild = 0.0, poor = 0.0 }
 
 [model]
 kind = "tiny"

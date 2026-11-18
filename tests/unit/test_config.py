@@ -177,9 +177,10 @@ def test_quick_configuration_keeps_every_path_under_data_quick(monkeypatch, tmp_
     for field in dataclasses.fields(cfg.paths):
         assert quick in getattr(cfg.paths, field.name).parents, field.name
     default = load_config(DEFAULT_CONFIG)
-    assert (cfg.synth.n_train, cfg.synth.n_validation_known, cfg.synth.n_validation_new, cfg.synth.dpi) == (24, 8, 4, 50)
+    assert (cfg.synth.n_train, cfg.synth.n_validation_known, cfg.synth.n_validation_new, cfg.synth.dpi) == (24, 8, 4, 150)     # at 50 dpi no reader sees the QR (L101): the quick mode draws one 4 cm code per clean page at 150 dpi (D56)
+    assert (cfg.synth.qr_cm, dataclasses.astuple(cfg.synth.scan_profiles)) == ((4.0,), (1.0, 0.0, 0.0))
     assert (cfg.synth.test_per_day_known, cfg.synth.test_per_day_new) == (3, 3)
-    assert dataclasses.replace(cfg.synth, n_train=2000, n_validation_known=200, n_validation_new=100, dpi=200,
+    assert dataclasses.replace(cfg.synth, n_train=2000, n_validation_known=200, n_validation_new=100, dpi=200, qr_cm=(2.5, 3.0, 4.0), scan_profiles=default.synth.scan_profiles,
                                test_per_day_known=15, test_per_day_new=15) == default.synth
     assert cfg.calendar.test_last_day == date(2026, 10, 5) and dataclasses.replace(cfg.calendar, test_last_day=date(2026, 10, 28)) == default.calendar
     m = cfg.model

@@ -166,4 +166,16 @@ def write_summary(summary: Mapping[str, Any], reports_dir: Path) -> Path:
     return write_atomic(Path(reports_dir) / "evaluation_summary.md", summary_markdown(summary))
 
 
-__all__ = ["build_summary", "close_day", "evaluate", "pending_criteria", "store_result", "summary_markdown", "write_summary"]
+RESULTS_START, RESULTS_END = "<!-- results:start -->", "<!-- results:end -->"
+
+
+def replace_block(text: str, name: str, start: str, end: str, content: str) -> str:
+    """`text` with what lies between the markers `start` and `end` replaced by `content`: each marker once and in order, or a ``ValueError`` that names the file (`name`). A second use with the same
+    content changes nothing."""
+    first, last = text.find(start), text.find(end)
+    if text.count(start) != 1 or text.count(end) != 1 or last < first:
+        raise ValueError(f"{name} no tiene los marcadores {start} y {end}, una vez cada uno y en ese orden")
+    return text[: first + len(start)] + "\n" + content.strip("\n") + "\n" + text[last:]
+
+
+__all__ = ["RESULTS_END", "RESULTS_START", "build_summary", "close_day", "evaluate", "pending_criteria", "replace_block", "store_result", "summary_markdown", "write_summary"]

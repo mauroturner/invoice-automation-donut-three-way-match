@@ -21,11 +21,7 @@ SRC = Path(__file__).resolve().parents[2] / "src" / "invoiceflow"
 GENERIC = {"config.py"}
 # keys whose only reader is a library or a service by name, not an attribute of the configuration object (each one with its reader)
 READ_ELSEWHERE: dict[str, str] = {}
-NOT_READ_YET: dict[str, str] = {
-    "service.host": "U20 (api.py, serve)", "service.port": "U20", "service.token_env": "U20", "site.max_total_bytes": "U18 (site_export.py)",
-    "paths.raw_dir": "U19 (pipeline.py)", "paths.warehouse": "U19", "paths.outputs_dir": "U17 (export.py)", "paths.site_dir": "U18", "paths.reports_dir": "U19",
-    "paths.dashboard_html": "U17 (render.py)", "paths.readme": "U19 (docs-sync)", "paths.figures_dir": "U18 (figures.py)",
-}
+NOT_READ_YET: dict[str, str] = {"service.host": "U20 (api.py, serve)", "service.port": "U20", "service.token_env": "U20"}
 
 
 def module_names() -> dict[str, tuple[set[str], set[str]]]:

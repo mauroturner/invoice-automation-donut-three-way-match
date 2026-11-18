@@ -34,6 +34,9 @@ def good(quick_view, quick_master, tmp_path_factory) -> dict[str, Path]:
     return found
 
 
+PAGE = (1240, 1754)      # A4 at the 150 dpi of the quick mode (D56; it was 413 x 585 at 50)
+
+
 def small(view, **changes):
     return dataclasses.replace(view, intake=dataclasses.replace(view.intake, **changes))
 
@@ -42,9 +45,9 @@ def test_each_good_format_is_accepted_and_loads_as_one_rgb_page(quick_view, good
     for file_format, path in good.items():
         check = inspect_file(path, quick_view)
         assert (check.status, check.rule_id, check.file_format, check.bytes) == ("accepted", None, file_format, path.stat().st_size), file_format
-        assert check.pixels == 413 * 585 and len(check.sha256) == 64 and check.name == path.name
+        assert check.pixels == PAGE[0] * PAGE[1] and len(check.sha256) == 64 and check.name == path.name
         page = load_page(path, quick_view)
-        assert page.mode == "RGB" and page.size == (413, 585), file_format
+        assert page.mode == "RGB" and page.size == PAGE, file_format
 
 
 def test_each_bad_file_goes_to_quarantine_and_the_day_goes_on(quick_view, good, tmp_path):
@@ -177,7 +180,7 @@ def test_a_symbolic_link_and_a_folder_are_not_files_of_the_inbox(quick_view, goo
 def test_loading_a_page_reads_the_image_of_a_pdf_and_refuses_what_inspect_would(quick_view, good, tmp_path):
     from invoiceflow.intake import IntakeError
 
-    assert load_page(good["pdf"], quick_view).size == (413, 585)
+    assert load_page(good["pdf"], quick_view).size == PAGE
     bad = make_bad_file("pdf_named_png", tmp_path)
     with pytest.raises(IntakeError, match="V12"):
         load_page(bad, quick_view)

@@ -20,6 +20,7 @@ from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, field
 from datetime import date
 from decimal import Decimal
+from pathlib import Path
 from typing import Any
 
 from PIL import Image
@@ -35,6 +36,7 @@ from invoiceflow.qr import QrPayload, QrRead
 from invoiceflow.registry import SealError
 from invoiceflow.synth.invoices import InvoiceTruth
 from invoiceflow.synth.master import Master
+from invoiceflow.truth import read_truth
 
 COHORTS = {"test_known": "known", "test_new": "new"}
 TEST_SPLITS = tuple(COHORTS)
@@ -122,6 +124,18 @@ def _baseline_row(name: str, cohort: str, rows: Sequence[dict[str, Any]], decisi
     review = sum(1 for r in planted if decisions[r["invoice_key"]] == "review")
     return {"baseline": name, "cohort": cohort, "auto_post": len(posted), "bad_post": badly, "bad_post_rate": _rate(badly, len(posted)), "ci_low": low, "ci_high": high,
             "straight_through": _rate(straight, len(clean)), "review_recall": _rate(review, len(planted))}
+
+
+def load_test_truths(interim_dir: Path, delivery_ids: Sequence[str]) -> list[InvoiceTruth]:
+    """The truth of the test, read from the truth file of each daily delivery of `delivery_ids` (``<interim>/truth/<id>.jsonl``): **the only place the closing run reads them** (D23; ``truth.read_truth``
+    answers to this module and to ``baselines``). A missing file is an ``EvaluationError``; nothing is written."""
+    truths: list[InvoiceTruth] = []
+    for delivery_id in delivery_ids:
+        path = Path(interim_dir) / "truth" / f"{delivery_id}.jsonl"
+        if not path.is_file():
+            raise EvaluationError(f"falta la verdad de la entrega {delivery_id}: la prueba no se evalúa sin ella")
+        truths += read_truth(path)
+    return sorted(truths, key=lambda t: t.invoice_key)
 
 
 def evaluate_test(conn: Any, view: SealedConfig, master: Master, truths: Sequence[InvoiceTruth], *, repeat_new: int | None = None,
