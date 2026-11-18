@@ -92,3 +92,19 @@ def cord_fixture(tmp_path_factory: pytest.TempPathFactory) -> dict[str, Path]:
     from tests.fixtures.make_cord_fixture import make_cord_fixture
 
     return make_cord_fixture(tmp_path_factory.mktemp("cord") / "cord")
+
+
+@pytest.fixture(scope="session")
+def view(cfg):
+    """The sealed view of the default configuration with placeholder hashes of the sources: what the generator and the match read does not depend on them."""
+    from invoiceflow.config import SealedConfig
+
+    return SealedConfig.of(cfg, tuple("0" * 64 for _ in cfg.source.cord_files), "0" * 64)
+
+
+@pytest.fixture(scope="session")
+def quick_view(quick_cfg):
+    """The sealed view of the quick configuration, with placeholder hashes."""
+    from invoiceflow.config import SealedConfig
+
+    return SealedConfig.of(quick_cfg, tuple("0" * 64 for _ in quick_cfg.source.cord_files), "0" * 64)
