@@ -385,7 +385,10 @@ def test_load_donut_still_builds_the_same_extractor_and_now_checks_the_artifact_
     height, width = quick_view.model.input_size
     size = extractor.processor.image_processor.size
     assert (size["height"], size["width"]) == (height, width)
-    assert extractor.task_token == quick_view.model.task_invoice and extractor.max_length == quick_view.model.max_length and not extractor.model.training
+    from invoiceflow.model.tiny import read_length
+
+    # a tiny model reads up to its own short length, a real one up to [model] max_length (tests/unit/test_tiny.py; D31, the speed unit)
+    assert extractor.task_token == quick_view.model.task_invoice and extractor.max_length == read_length(quick_view) and not extractor.model.training
     spy = []
     monkeypatch.setattr(artifact_module, "_read_model", lambda folder: spy.append(folder))
     for bad in ({**row, "artifact_sha256": "0" * 64}, {k: v for k, v in row.items() if k != "artifact_sha256"}):

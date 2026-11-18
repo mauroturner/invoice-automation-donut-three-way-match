@@ -7,6 +7,11 @@ the vocabulary: ``train.prepare_tokens`` adds them as special tokens, as it does
 
 ``register_extractor()`` registers the extractor ``tiny`` (only this module may; ``extractors.register`` checks who asks): the quick mode and the tests read a page with the very same
 loader as the real model (``donut.load_donut``, which checks the artifact's hashes first), on the CPU.
+
+A tiny model fitted for a few steps never emits the end token, so every page it reads would run to ``max_length`` (256 tokens in the quick mode), and that decoding was most of the time
+of a quick launch (D31, the speed unit). It is a double of the real model, so its reading length is a property of the double, like its sizes: ``read_length(view)`` is at most
+``READ_LENGTH`` tokens, the prompt included, and never more than ``[model] max_length``; ``donut.load_donut`` reads a tiny model with it and a real one with ``max_length``. What the tiny
+model writes has no tag in it, so a shorter read is the same tree, ``{}``.
 """
 
 from __future__ import annotations
@@ -24,6 +29,7 @@ SPECIALS = ("<pad>", "<s>", "</s>", "<unk>")
 EMBED_DIM, WINDOW, DEPTHS, HEADS = 16, 4, (1, 1), (1, 2)
 D_MODEL, DECODER_LAYERS, DECODER_HEADS, DECODER_FFN = 32, 1, 2, 64
 _TAG = re.compile(r"</?s_[^>\s]*>|<sep/>")
+READ_LENGTH = 16          # the most tokens the tiny model decodes for one page, the prompt included (D31, the speed unit)
 
 
 def vocab_of(sequences: Iterable[str]) -> list[str]:
@@ -32,6 +38,11 @@ def vocab_of(sequences: Iterable[str]) -> list[str]:
     for sequence in sequences:
         words.update(_TAG.sub(" ", sequence).split())
     return sorted(words)
+
+
+def read_length(view: SealedConfig) -> int:
+    """The decoding limit of a tiny model under `view`: ``READ_LENGTH``, or ``[model] max_length`` when that is shorter."""
+    return min(READ_LENGTH, view.model.max_length)
 
 
 def tiny_model(vocab: Iterable[str], view: SealedConfig) -> tuple[Any, Any]:

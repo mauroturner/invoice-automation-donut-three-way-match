@@ -67,7 +67,8 @@ class DonutExtractor:
 
 
 def load_donut(view: SealedConfig, registry_row: Mapping[str, Any], models_dir: Path) -> DonutExtractor:
-    """The real extractor from the folder `models_dir`/`registry_row["artifact_name"]` (``safetensors`` only, no network): the page is resized to ``[model] input_size``."""
+    """The real extractor from the folder `models_dir`/`registry_row["artifact_name"]` (``safetensors`` only, no network): the page is resized to ``[model] input_size`` and read up to
+    ``[model] max_length`` tokens (a tiny model, up to ``tiny.read_length``)."""
     import torch
 
     from invoiceflow.model.artifact import load_artifact
@@ -78,7 +79,12 @@ def load_donut(view: SealedConfig, registry_row: Mapping[str, Any], models_dir: 
     height, width = view.model.input_size
     processor.image_processor.size = {"height": height, "width": width}
     model.eval().to(device)
-    return DonutExtractor(model=model, processor=processor, task_token=view.model.task_invoice, max_length=view.model.max_length, device=device,
+    max_length = view.model.max_length
+    if view.model.kind == "tiny":                       # the tiny double never emits the end token: it reads its own short length (tiny.read_length)
+        from invoiceflow.model.tiny import read_length
+
+        max_length = read_length(view)
+    return DonutExtractor(model=model, processor=processor, task_token=view.model.task_invoice, max_length=max_length, device=device,
                           model_version=str(registry_row["model_version"]), no_grad=torch.no_grad)
 
 

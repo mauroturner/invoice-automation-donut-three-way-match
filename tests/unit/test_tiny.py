@@ -91,6 +91,31 @@ def test_the_tiny_extractor_is_registered_by_its_module_only_and_reads_a_saved_a
     assert isinstance(tree, dict), "an untrained tiny model writes something unreadable: the tree is a dict, empty at worst"
 
 
+def test_the_tiny_model_reads_at_most_its_own_short_length_and_the_real_model_reads_max_length(quick_view, tiny_kit, tmp_path):
+    """A tiny model fitted for a few steps never emits the end token, so each page it reads runs to the decoding limit: at ``max_length`` (256 in the quick mode) that is most of the time of
+    a quick launch (D31, the speed unit). The tiny kind reads at most ``READ_LENGTH`` tokens, the prompt included; the real kinds keep reading up to ``[model] max_length``. What it reads
+    is unreadable either way (no tag is ever generated), so a shorter read gives the same tree: ``{}``."""
+    import dataclasses
+
+    from invoiceflow.model.donut import load_donut
+    from invoiceflow.model.tiny import READ_LENGTH, read_length
+
+    assert 1 < READ_LENGTH < quick_view.model.max_length and read_length(quick_view) == READ_LENGTH
+    assert read_length(dataclasses.replace(quick_view, model=dataclasses.replace(quick_view.model, max_length=READ_LENGTH - 1))) == READ_LENGTH - 1, "never more than max_length"
+    register_extractor()
+    record = save_artifact(tiny_kit.model, tiny_kit.processor, tmp_path / "tiny-1")
+    row = {"artifact_name": "tiny-1", "artifact_sha256": record.sha256, "model_version": "tiny-1"}
+    extractor = make_extractor(quick_view, row, tmp_path)
+    assert extractor.max_length == READ_LENGTH
+    generated = []
+    real_generate = extractor.model.generate
+    extractor.model.generate = lambda *args, **kwargs: (generated.append(out := real_generate(*args, **kwargs)), out)[1]
+    assert extractor.extract(Image.new("RGB", (413, 585), "white")) == {}
+    assert generated[0].sequences.shape[-1] <= READ_LENGTH, "the read stops at READ_LENGTH tokens"
+    real_kind = dataclasses.replace(quick_view, model=dataclasses.replace(quick_view.model, kind="donut"))
+    assert load_donut(real_kind, row, tmp_path).max_length == quick_view.model.max_length, "a real model reads up to [model] max_length"
+
+
 def test_the_tiny_extractor_refuses_an_artifact_whose_hash_is_not_the_registered_one(quick_view, tiny_kit, tmp_path):
     from invoiceflow.model.artifact import ArtifactError
 
