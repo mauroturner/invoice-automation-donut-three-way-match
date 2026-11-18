@@ -140,3 +140,37 @@ def tiny_kit(quick_view, tiny_truths):
     from tests.fixtures.tiny_kit import make_kit
 
     return make_kit(quick_view, tiny_truths, extra_cord=4)
+
+
+@pytest.fixture(scope="session")
+def evaluated(quick_view, tmp_path_factory):
+    """The quick world's three days issued, the model registered, the launch sealed and the close evaluated, once per session (``tests/fixtures/evaluated.py``): what the star model, the design and
+    the site files are made from. Read-only for the tests: one that changes anything copies it."""
+    from tests.fixtures.evaluated import build_evaluated
+
+    return build_evaluated(quick_view, tmp_path_factory.mktemp("evaluated"))
+
+
+@pytest.fixture(scope="session")
+def star_export(evaluated, tmp_path_factory):
+    """The star model exported from ``evaluated`` into a folder of the session: ``.out`` (the Parquet files), ``.paths``, ``.run`` and the state it was made from."""
+    from types import SimpleNamespace
+
+    from invoiceflow.dashboard.semantic_model import MODEL
+    from invoiceflow.export import export_star_schema
+
+    out = tmp_path_factory.mktemp("star") / "powerbi"
+    paths = export_star_schema(evaluated.conn, out, MODEL, evaluated.run, evaluated.view, seal_path=evaluated.seal)
+    return SimpleNamespace(out=out, paths=paths, run=evaluated.run, view=evaluated.view, db=evaluated.db, conn=evaluated.conn, folder=evaluated.root, state=evaluated)
+
+
+@pytest.fixture(scope="session")
+def rendered_html(star_export, tmp_path_factory):
+    """The HTML design rendered once from ``star_export``: ``.path`` and ``.html``."""
+    from types import SimpleNamespace
+
+    from invoiceflow.dashboard.render import render_design
+    from invoiceflow.dashboard.semantic_model import MODEL
+
+    path = render_design(MODEL, star_export.out, tmp_path_factory.mktemp("design") / "powerbi-design.html", star_export.run)
+    return SimpleNamespace(path=path, html=path.read_text(encoding="utf-8"))

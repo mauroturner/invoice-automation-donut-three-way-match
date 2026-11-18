@@ -311,7 +311,8 @@ def test_run_checks_names_its_group_and_its_controls(db):
     with pytest.raises(ValueError, match="chk_nope"):
         run_checks(db, "load", only=["chk_nope"])
     assert [c.check_id for c in run_checks(db, "load", only=["chk_validation_passed"])] == ["chk_validation_passed"]
-    assert run_checks(db, "model") == [], "the checks of the star schema come with the star schema (U17)"
+    with pytest.raises(ValueError, match="chk_nope"):
+        run_checks(db, "model", only=["chk_nope"])          # the controls of the star schema came with the star schema (U17): their own tests run them on a rebuilt one
 
 
 def test_a_control_file_must_be_one_select(db, tmp_path, monkeypatch):

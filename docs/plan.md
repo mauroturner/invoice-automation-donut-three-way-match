@@ -659,6 +659,8 @@ Relaciones: uno a varios, filtro unidireccional de la dimensión al hecho, todas
 
 `fact_invoice_reason` se relaciona con `fact_invoice` por `dim_reason` y por la clave de factura en el modelo de Power BI como relación de varios a uno con `fact_invoice` **[Supuesto: el diseño lo declara como relación de hecho a hecho filtrada desde `fact_invoice`; U17 decide si se reemplaza por una dimensión `dim_invoice`]**. Tamaño: el hecho mayor es `fact_invoice` (unas 900 filas con la validación); todo cabe en menos de 1 MB.
 
+**Nota del 2026-11-18 (U17, D54)**: lo construido difiere del cuadro de arriba en tres puntos: `fact_invoice` son las facturas de la **prueba evaluada** (unas 600, sin la validación, que el flujo no decide); `fact_field_read` se deriva con SQL de `extracted_fields` y `eval_invoice` y su `correct` son las hojas normalizadas a un valor; `fact_baseline` no exporta la cohorte `all`; y `fact_cord_eval` tiene una fila por modelo (`field = all`, sin segundos). `fact_invoice_reason` no se reemplaza por una dimensión de facturas. El seguimiento diario es `fact_daily_ops`, que existe antes del cierre.
+
 ## 20. Diseño del tablero (HTML)
 
 `dashboard/semantic_model.py` es la única fuente (tablas, columnas, relaciones, medidas y páginas); `render.py` y `svg.py` se adaptan de los del proyecto 06: autocontenido, sin recursos externos ni scripts, todo texto con `html.escape`, segmentadores que declaran qué filtran y títulos con «(no lo filtra …)» si ninguna relación alcanza el visual.
@@ -685,6 +687,8 @@ Reglas bloqueantes fallidas = CALCULATE ( COUNTROWS ( fact_validation ), fact_va
 ```
 
 `validate_model` (como el del proyecto 06) exige que cada referencia exista, que el texto con que se compara una columna esté en su descripción, que ninguna medida quite filtros y que las de la prueba pidan `sealed`. Por eso U17 es de riesgo alto (ítem 6).
+
+**Nota del 2026-11-18 (U17, D54)**: son 18 medidas, no 16: `Facturas`, `Cargadas solas` y `A revisión` suman `fact_daily_ops` (el seguimiento, sin sello), y se agregaron `Facturas de la prueba` y `Facturas a revisión de la prueba`; toda medida de la prueba pide `seal_state = "sealed"`.
 
 Páginas (grilla de 12 por 9), todas con la leyenda «Datos sintéticos salvo CORD»:
 
