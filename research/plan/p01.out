@@ -1,0 +1,6 @@
+[p01] CORD validation, checkpoint unchanged, 100 receipts on cuda:
+  TED accuracy mean 93.65 % (median 100.0), leaf recall 88.02 % (1073/1219), exact receipts 43, 0.418 s per receipt
+  field recall (fields with >= 20 leaves): menu.cnt 85.7, menu.nm 80.4, menu.price 91.1, menu.sub[].nm 87.1, menu[].cnt 87.5, menu[].nm 83.9, menu[].price 97.1, menu[].unitprice 88.6, sub_total.subtotal_price 100.0, sub_total.tax_price 97.9, total.cashprice 96.9, total.changeprice 96.9, total.menuqty_cnt 84.6, total.total_price 100.0
+[p01] target tokens train: n 800, median 61.0, p99 325, max 375, over 768: 0
+[p01] target tokens validation: n 100, median 61.0, p99 202, max 233, over 768: 0
+[p01] the test shard was not opened

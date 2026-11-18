@@ -1,0 +1,24 @@
+[p02] 30 synthetic invoices (seed 20261119), two layouts; CUIT range 30-0000xxxx-d holds 9089 valid CUITs for serials 1-9999
+[p02] page A4 at 150 dpi: render 0.037 s, PNG 34418 B, JPEG q85 104649 B, QR version 13
+[p02] QR 150dpi_2.5cm_clean (147 px): pyzbar 30/30, aruco 0/30
+[p02] QR 150dpi_2.5cm_jpeg35 (147 px): pyzbar 0/30, aruco 0/30
+[p02] QR 150dpi_2.5cm_blur1 (147 px): pyzbar 0/30, aruco 0/30
+[p02] QR 150dpi_2.5cm_rot2 (147 px): pyzbar 0/30, aruco 0/30
+[p02] QR 150dpi_2.5cm_salt1 (147 px): pyzbar 6/30, aruco 0/30
+[p02] QR 150dpi_4.0cm_clean (236 px): pyzbar 30/30, aruco 30/30
+[p02] QR 150dpi_4.0cm_jpeg35 (236 px): pyzbar 30/30, aruco 30/30
+[p02] QR 150dpi_4.0cm_blur1 (236 px): pyzbar 0/30, aruco 0/30
+[p02] QR 150dpi_4.0cm_rot2 (236 px): pyzbar 30/30, aruco 0/30
+[p02] QR 150dpi_4.0cm_salt1 (236 px): pyzbar 29/30, aruco 29/30
+[p02] QR 200dpi_2.5cm_clean (196 px): pyzbar 30/30, aruco 26/30
+[p02] QR 200dpi_2.5cm_jpeg35 (196 px): pyzbar 30/30, aruco 26/30
+[p02] QR 200dpi_2.5cm_blur1 (196 px): pyzbar 0/30, aruco 0/30
+[p02] QR 200dpi_2.5cm_rot2 (196 px): pyzbar 28/30, aruco 0/30
+[p02] QR 200dpi_2.5cm_salt1 (196 px): pyzbar 30/30, aruco 12/30
+[p02] QR 200dpi_4.0cm_clean (314 px): pyzbar 30/30, aruco 30/30
+[p02] QR 200dpi_4.0cm_jpeg35 (314 px): pyzbar 30/30, aruco 30/30
+[p02] QR 200dpi_4.0cm_blur1 (314 px): pyzbar 30/30, aruco 12/30
+[p02] QR 200dpi_4.0cm_rot2 (314 px): pyzbar 30/30, aruco 30/30
+[p02] QR 200dpi_4.0cm_salt1 (314 px): pyzbar 30/30, aruco 27/30
+[p02] Donut CORD checkpoint unchanged on the clean invoices: recall qty 5.8 %, amount 5.8 %, unit_price 4.3 %, desc 0.7 %, total 16.7 %; invoices with every quantity, every line amount and the total right: 0/30 (layout A 0/15, B 0/15)
+[p02] no CORD shard was opened; every invoice is synthetic

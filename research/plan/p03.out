@@ -1,0 +1,8 @@
+[p03] Donut training steps on NVIDIA GeForce RTX 3090, input [1280, 960], targets padded to 384 tokens, 24 CORD train receipts
+[p03] fp32_batch1: 0.235 s per step, 0.235 s per image, peak 8.73 GB allocated
+[p03] fp32_batch2: 0.434 s per step, 0.217 s per image, peak 14.03 GB allocated
+[p03] fp32_batch4: 2.197 s per step, 0.549 s per image, peak 25.39 GB allocated
+[p03] bf16_batch1: 0.162 s per step, 0.162 s per image, peak 7.43 GB allocated
+[p03] bf16_batch2: 1.065 s per step, 0.532 s per image, peak 11.71 GB allocated
+[p03] bf16_batch4: 1.347 s per step, 0.337 s per image, peak 20.52 GB allocated
+[p03] the test shard was not opened; no weights were saved
