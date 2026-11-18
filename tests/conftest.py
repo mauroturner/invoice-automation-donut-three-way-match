@@ -63,6 +63,53 @@ def _each_page_rendered_once():
         yield
 
 
+@pytest.fixture(scope="session", autouse=True)
+def _each_master_fingerprinted_once():
+    """``registry.master_fingerprint(view)`` generates the whole master of `view` to hash it, and every ``config_fingerprint`` asks for it: some four hundred times a session, a third of
+    a second each with the default configuration (D31, the speed unit). The master is a pure function of the view (``tests/unit/test_master.py``), so the session keeps the fingerprint of
+    each view it has seen; a view that differs in anything is a new one. A test that replaces ``master_fingerprint`` replaces this one."""
+    from invoiceflow import registry
+
+    real = registry.master_fingerprint
+    seen: dict = {}
+
+    def master_fingerprint_once(view):
+        if view not in seen:
+            seen[view] = real(view)
+        return seen[view]
+
+    with pytest.MonkeyPatch.context() as patch:
+        patch.setattr(registry, "master_fingerprint", master_fingerprint_once)
+        yield
+
+
+@pytest.fixture(scope="session", autouse=True)
+def _one_event_loop_for_the_stand_in():
+    """A ``TestClient`` that is not used as a context manager starts an event loop in a new thread for every request and another one for reading its body, and the stand-in ERP is
+    asked some four thousand times a session, by the flow and by the tests (D31, the speed unit). The session keeps one loop running and every such client sends its requests to it,
+    one after another as before; the app, its lifespan (never started, as before) and every answer are the same. A client entered as a context manager keeps its own loop."""
+    import contextlib
+
+    from fastapi import FastAPI
+    from fastapi.testclient import TestClient
+
+    real = TestClient._portal_factory
+    with TestClient(FastAPI()) as keeper:                   # an empty app entered once: its loop is the one the session shares
+        shared, backend = keeper.portal, dict(keeper.async_backend)
+
+        @contextlib.contextmanager
+        def one_loop(self):
+            if self.portal is not None or dict(self.async_backend) != backend:
+                with real(self) as portal:
+                    yield portal
+            else:
+                yield shared
+
+        with pytest.MonkeyPatch.context() as patch:
+            patch.setattr(TestClient, "_portal_factory", one_loop)
+            yield
+
+
 def _cuda_missing() -> bool:
     try:
         import torch
