@@ -1,0 +1,167 @@
+# Pipeline configuration (plan, section 4). Read by invoiceflow.config.load_config: every key is checked, and an unknown one is refused by name.
+# Relative paths are resolved against the project folder ($INVOICEFLOW_HOME), never against the working directory.
+# Which keys enter the seal's fingerprint and which do not is declared in invoiceflow/config.py (FINGERPRINT_KEYS, UNSEALED_KEYS).
+
+[source]                                   # D02
+cord_dir = "data/raw/cord"
+cord_commit = "7f0115a4b758a71d6473b8d085751692da2fef98"
+max_shard_bytes = 600000000
+max_rows = 1000
+max_image_pixels = 16000000                # the biggest image of CORD: 3,024 x 4,224 = 12.8 million
+max_gt_depth = 8
+arca_spec_path = "data/raw/arca/QRespecificaciones.pdf"
+arca_spec_bytes = 91626
+arca_spec_sha256 = "a6d0f71e14f282836f07834af76a975dd885386bf972d860878d4b44278deaac"
+
+[[source.cord_files]]                      # one per shard; the six of research/s00 (data/raw/cord/manifest.json)
+split = "train"
+name = "train-00000-of-00004-b4aaeceff1d90ecb.parquet"
+bytes = 490224630
+sha256 = "da3994eee1bf9bd3c57f0d53a72c3a6812c8696c5ba26245987949ddf73483cc"
+
+[[source.cord_files]]
+split = "train"
+name = "train-00001-of-00004-7dbbe248962764c5.parquet"
+bytes = 441418432
+sha256 = "cce4def16a0d6a6c75f80be712f7494c56c318a8829b712f5c62650155c9e58e"
+
+[[source.cord_files]]
+split = "train"
+name = "train-00002-of-00004-688fe1305a55e5cc.parquet"
+bytes = 443802181
+sha256 = "591e2db8fe8b1d364b054f46e8c375b7f00e72578914ba46a573b6858162cab2"
+
+[[source.cord_files]]
+split = "train"
+name = "train-00003-of-00004-2d0cd200555ed7fd.parquet"
+bytes = 455555434
+sha256 = "1ffd9de8d6fbcee7630fd4cdfedff05b9b7fabc0fae4fc17557c5fe7cf178748"
+
+[[source.cord_files]]
+split = "validation"
+name = "validation-00000-of-00001-cc3c5779fe22e8ca.parquet"
+bytes = 242080800
+sha256 = "0d0f6dac11fdcc549de2746aa9f53136a3bc22a2a1aff2b0b847f7622ad60c15"
+
+[[source.cord_files]]
+split = "test"                             # sealed for the closing evaluation: its size and hash are checked, its rows are never opened before (D10)
+name = "test-00000-of-00001-9c204eb3f4e11791.parquet"
+bytes = 234202795
+sha256 = "51c65f1788faff392abe2a0b55b023eb23e9be551c509138eaa3a832514224e7"
+
+[calendar]                                 # D22
+history_start = 2026-01-05                 # first date of the training and validation invoices
+launch_last_day = 2026-09-30
+test_first_day = 2026-10-01
+test_last_day = 2026-10-28
+weekdays_only = true
+
+[synth]                                    # D04, D05, D10
+seed_master = 11
+seed_train = 101
+seed_validation = 202
+seed_test = 303
+n_train = 2000
+n_validation_known = 200
+n_validation_new = 100
+test_per_day_known = 15
+test_per_day_new = 15
+suppliers_known = 40
+suppliers_new_validation = 8
+suppliers_new_test = 15
+layouts_known = ["L1", "L2", "L3"]
+layout_validation_new = "L4"
+layout_test_new = "L5"
+fonts_known = ["DejaVuSans", "DejaVuSansMono"]
+font_validation_new = "DejaVuSansMono-Bold"
+font_test_new = "DejaVuSerif"
+dpi = 200
+scan_profiles = { clean = 0.4, mild = 0.4, poor = 0.2 }
+qr_cm = [2.5, 3.0, 4.0]
+file_formats = { png = 0.3, jpeg = 0.3, pdf = 0.4 }
+max_lines = 12
+usd_share = 0.10
+iva105_share = 0.20
+planted_rate = 0.023                       # per class; 13 classes: 0.299 of the invoices
+cuit_serial_range = [1, 9999]
+
+[qr]                                       # D06, D07
+readers = ["pyzbar", "aruco"]
+max_text_bytes = 1024
+hosts = ["www.arca.gob.ar", "www.afip.gob.ar"]
+path = "/fe/qr/"
+
+[intake]                                   # D08
+max_file_bytes = 10485760
+max_pixels = 40000000
+formats = ["png", "jpeg", "pdf"]
+pdf_max_objects = 200
+
+[model]                                    # D09, D11-D13
+kind = "donut"                             # "tiny" only under data/quick/; "stub" only if the tests register it
+base = "naver-clova-ix/donut-base-finetuned-cord-v2"
+base_revision = "8003d433113256b4ce3a0f5bf604b29ff78a7451"
+task_cord = "<s_cord-v2>"
+task_invoice = "<s_factura_ar>"
+input_size = [1280, 960]
+max_length = 768
+epochs = 6
+candidate_epochs = [2, 4, 6]
+learning_rate = 3e-5
+warmup_steps = 200
+batch_size = 1
+grad_accumulation = 8
+bf16 = true
+seed = 0
+cord_val_tolerance = 2.0                   # points of TED on CORD's validation (M04)
+infer_device = "auto"                      # cuda if there is one, else cpu
+
+[match]                                    # D14, D15
+price_tolerance_pct = 2.0
+qty_over_receipt = 0.0
+rounding_per_line = 0.01
+total_qr_tolerance = 0.01
+supported_types = [1]
+require_qr = true
+
+[erp]                                      # D16, D17
+mode = "standin"                           # "standin" or "http" (real ERPNext)
+base_url = ""
+token_env = "INVOICEFLOW_ERP_TOKEN"
+post_as = "draft"                          # the only accepted value
+timeout_s = 30
+
+[evaluation]                               # D20
+resamples = 2000
+seed = 0
+
+[criteria]                                 # preregistered (requirements.md 8.1)
+c01_min_ted_diff = -2.0
+c02_min_line_exact = 0.90
+c03_min_line_exact = 0.80
+c04_min_qr_read = 0.97
+c05_max_bad_post_upper = 0.02
+c06_min_straight_through = 0.85
+c07_min_review_recall = 0.99
+
+[service]                                  # D27
+host = "127.0.0.1"
+port = 8000
+token_env = "INVOICEFLOW_API_TOKEN"
+
+[site]
+max_total_bytes = 204800
+
+[paths]
+raw_dir = "data/raw"
+interim_dir = "data/interim"
+warehouse = "data/warehouse/invoiceflow.sqlite"
+models_dir = "data/models"
+erp_db = "data/erp/standin.sqlite"
+outputs_dir = "outputs/powerbi"
+site_dir = "outputs/site"
+reports_dir = "reports"
+seal = "reports/model_seal.json"
+dashboard_html = "dashboard/powerbi-design.html"
+readme = "README.md"
+figures_dir = "docs/figures"

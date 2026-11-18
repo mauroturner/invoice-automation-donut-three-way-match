@@ -1,0 +1,64 @@
+# Quick mode (plan, section 4; D30): the same pipeline on a tiny CORD, 24 small invoices and a tiny model, three test days, everything under data/quick/.
+# Nothing here is written outside data/quick/: invoiceflow.config refuses 'tiny' (and an empty accepted hash) unless every path is under it.
+# The accepted hashes are empty on purpose: the first view of each source is recorded in data/quick/source.lock.json (as project 06 does).
+extends = "pipeline.toml"
+
+[source]
+cord_dir = "data/quick/cord"
+arca_spec_path = "data/quick/arca/QRespecificaciones.pdf"
+arca_spec_bytes = 0
+arca_spec_sha256 = ""
+
+[[source.cord_files]]                      # replaces the list of the six real shards: the tiny CORD has one file per split
+split = "train"
+name = "train-00000-of-00001.parquet"
+bytes = 0
+sha256 = ""
+
+[[source.cord_files]]
+split = "validation"
+name = "validation-00000-of-00001.parquet"
+bytes = 0
+sha256 = ""
+
+[[source.cord_files]]
+split = "test"
+name = "test-00000-of-00001.parquet"
+bytes = 0
+sha256 = ""
+
+[calendar]
+test_last_day = 2026-10-05                 # three business days: 2026-10-01, 10-02 and 10-05
+
+[synth]
+n_train = 24
+n_validation_known = 8
+n_validation_new = 4
+test_per_day_known = 3
+test_per_day_new = 3
+dpi = 50
+
+[model]
+kind = "tiny"
+epochs = 2
+candidate_epochs = [1, 2]
+input_size = [128, 96]
+max_length = 256
+bf16 = false
+
+[evaluation]
+resamples = 100
+
+[paths]
+raw_dir = "data/quick/raw"
+interim_dir = "data/quick/interim"
+warehouse = "data/quick/invoiceflow.sqlite"
+models_dir = "data/quick/models"
+erp_db = "data/quick/erp.sqlite"
+outputs_dir = "data/quick/outputs/powerbi"
+site_dir = "data/quick/outputs/site"
+reports_dir = "data/quick/reports"
+seal = "data/quick/reports/model_seal.json"
+dashboard_html = "data/quick/dashboard/powerbi-design.html"
+readme = "data/quick/README.md"
+figures_dir = "data/quick/figures"
