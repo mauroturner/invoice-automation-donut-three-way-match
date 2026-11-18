@@ -40,10 +40,10 @@ def _no_flush_to_the_device():
 
 @pytest.fixture(scope="session", autouse=True)
 def _each_page_rendered_once():
-    """``render(truth, view)`` is a pure function of the truth and the view (``tests/unit/test_invoices.py`` pins it: the same seed gives the same bytes), and drawing a page, with its QR, is
-    most of what a launch, a delivery or a world of the tests spends outside the model (D31, the speed unit). The launch, the pipeline and the extractor of the tests get the bytes of a
-    page they already asked for in this session instead of drawing it again; the bytes are the same ones. ``invoiceflow.synth.render.render`` itself stays as it is, so the tests of the
-    generator draw every page; a test that replaces ``render`` in one of those modules replaces this one."""
+    """``render(truth, view)`` is a pure function of the truth and of the view's ``[synth]`` (the only part of the view that ``render`` and ``layouts.draw`` read; ``tests/unit/test_invoices.py``
+    pins it: the same seed gives the same bytes), and drawing a page, with its QR, is most of what a launch, a delivery or a world of the tests spends outside the model (D31, the speed
+    unit). The launch, the pipeline and the extractor of the tests get the bytes of a page they already asked for in this session instead of drawing it again; the bytes are the same
+    ones. ``invoiceflow.synth.render.render`` itself stays as it is, so the tests of the generator draw every page; a test that replaces ``render`` in one of those modules replaces this one."""
     from invoiceflow import launch, pipeline
     from invoiceflow.synth import render as rendering
     from tests.fixtures import stub_extractor
@@ -52,7 +52,7 @@ def _each_page_rendered_once():
     pages: dict = {}
 
     def render_once(truth, view):
-        key = (truth, view)
+        key = (truth, view.synth)
         if key not in pages:
             pages[key] = real(truth, view)
         return pages[key]
@@ -66,17 +66,19 @@ def _each_page_rendered_once():
 @pytest.fixture(scope="session", autouse=True)
 def _each_master_fingerprinted_once():
     """``registry.master_fingerprint(view)`` generates the whole master of `view` to hash it, and every ``config_fingerprint`` asks for it: some four hundred times a session, a third of
-    a second each with the default configuration (D31, the speed unit). The master is a pure function of the view (``tests/unit/test_master.py``), so the session keeps the fingerprint of
-    each view it has seen; a view that differs in anything is a new one. A test that replaces ``master_fingerprint`` replaces this one."""
+    a second each with the default configuration (D31, the speed unit). The master is a pure function of the view's ``[synth]`` and ``[calendar]`` (``synth/master.py``;
+    ``tests/unit/test_master.py::test_the_master_reads_the_generator_and_the_calendar_only``), so the session keeps the fingerprint of each pair of those it has seen; a pair that differs in
+    anything is a new one. A test that replaces ``master_fingerprint`` replaces this one."""
     from invoiceflow import registry
 
     real = registry.master_fingerprint
     seen: dict = {}
 
     def master_fingerprint_once(view):
-        if view not in seen:
-            seen[view] = real(view)
-        return seen[view]
+        key = (view.synth, view.calendar)
+        if key not in seen:
+            seen[key] = real(view)
+        return seen[key]
 
     with pytest.MonkeyPatch.context() as patch:
         patch.setattr(registry, "master_fingerprint", master_fingerprint_once)
