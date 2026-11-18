@@ -523,7 +523,7 @@ Motivos, en el orden en que se informan (el primero es `first_reason`):
 | 17 | `qty_over_order` | Lo facturado antes + esta cantidad > lo pedido |
 | 18 | `post_failed` | El ERP rechazó la carga o la lectura de vuelta no coincide (lo agrega `post`) |
 
-- **Decisión**: `auto_post` si no hay ningún motivo; si no, `review`. Con `require_qr`, los motivos 2 y 3 siempre mandan a revisión aunque lo demás cierre (D06).
+- **Decisión**: `auto_post` si no hay ningún motivo; si no, `review`. Con `require_qr`, los motivos 2 y 3 siempre mandan a revisión aunque lo demás cierre (D06). **Nota del 2026-11-18 (U11)**: `reasons` y `decide` aceptan además `file_rejected=<regla>` (una página en cuarentena no tiene campos y su única razón es el motivo 1); `ErpView` lleva `day` y sus tipos son los de `match.py`; un IVA ilegible es `total_arithmetic`; `erp_view` se escribe con el cliente del ERP en U13 (D48).
 - **Los bordes se prueban uno por uno** (B1 de los proyectos 05 y 06): `tests/unit/test_match.py::test_every_tolerance_boundary_by_hand` recorre el precio a 1,99 %, 2,00 % y 2,01 %; la cantidad igual, una más y una menos que lo recibido; el remito del día y el del día siguiente; el redondeo a 0,01 y a 0,02; con el resultado escrito a mano. «Dentro de la tolerancia» incluye el borde (≤).
 - Todo en `Decimal`; los porcentajes se comparan sin dividir por cero (una orden con precio 0 da `price_out_of_tolerance` si el facturado no es 0).
 
@@ -576,7 +576,7 @@ def fit_model(ctx) -> dict                                       # la tarea del 
 Todas llaman a `decide` con otras entradas, sobre las mismas facturas de la prueba:
 
 - **B0**: todo a revisión.
-- **B1**: solo el QR; dos vías por el total: proveedor, moneda y total del QR contra la orden (a `total_qr_tolerance` sobre el total de la orden prorrateado por lo facturado antes); sin líneas ni remitos; sin QR válido, revisión. Necesita el número de orden: lo toma de lo leído por el modelo (si no hay número, revisión).
+- **B1** (regla precisada el 2026-11-18, U11, D48): solo el QR; dos vías por el total: proveedor, moneda y total del QR contra la orden (a `total_qr_tolerance` sobre el total de la orden prorrateado por lo facturado antes); sin líneas ni remitos; sin QR válido, revisión. Necesita el número de orden: lo toma de lo leído por el modelo (si no hay número, revisión).
 - **B2**: el checkpoint de CORD sin ajustar, con su salida llevada al esquema de factura (`menu.nm`, `cnt`, `unitprice`, `price` a `lines`; `total.total_price` a `totals.total`), con las reglas completas (`p02`: 0 de 30 facturas con todo bien).
 - **B3**: los campos verdaderos con las reglas completas (oráculo; M06 lo usa en validación).
 
