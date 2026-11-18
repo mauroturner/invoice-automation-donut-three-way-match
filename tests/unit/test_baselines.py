@@ -7,8 +7,6 @@ from __future__ import annotations
 import dataclasses
 from decimal import Decimal
 
-import pytest
-
 from invoiceflow.baselines import b0, b1, b2, cord_tree_to_raw
 from invoiceflow.decide import decide
 from invoiceflow.normalize import normalize

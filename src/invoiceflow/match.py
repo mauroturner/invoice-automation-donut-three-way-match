@@ -16,6 +16,7 @@ Everything is ``Decimal``. «Inside the tolerance» includes the border. The det
 
 from __future__ import annotations
 
+import sqlite3
 from collections import defaultdict
 from collections.abc import Mapping, Set
 from dataclasses import dataclass, field
@@ -47,6 +48,7 @@ class PoLine:
     description: str
     qty: Decimal
     unit_price: Decimal
+    row: str | None = None                       # the ERP's name of the row (``po_detail`` of an invoice line); the match does not read it
 
 
 @dataclass(frozen=True)
@@ -241,3 +243,55 @@ def reasons(fields: InvoiceFields | None, qr: QrRead | None, view: ErpView | Non
     if over_order:
         out.append(_reason("qty_over_order", lines=over_order))
     return out
+
+
+
+def bill_no(pto_vta: int, nro: int) -> str:
+    """The supplier invoice number as the voucher prints it and the ERP holds it: the point of sale in five digits and the number in eight."""
+    return f"{pto_vta:05d}-{nro:08d}"
+
+
+def order_of(document: Mapping[str, Any]) -> PurchaseOrder:
+    """A purchase order of the ERP (Frappe's document) as the match reads it."""
+    lines = tuple(PoLine(row["item_code"], row.get("item_name") or "", Decimal(str(row["qty"])), Decimal(str(row["rate"])), row.get("name")) for row in document["items"])
+    return PurchaseOrder(document["name"], document["supplier"], document["currency"], date.fromisoformat(document["transaction_date"]), lines)
+
+
+def receipt_of(document: Mapping[str, Any], order: str) -> Receipt:
+    """A purchase receipt of the ERP as the match reads it: only the rows that receive what `order` asked for."""
+    lines = tuple(ReceiptLine(row["item_code"], Decimal(str(row["qty"]))) for row in document["items"] if row.get("purchase_order") == order)
+    return Receipt(document["name"], order, date.fromisoformat(document["posting_date"]), lines)
+
+
+def _voucher(fields: InvoiceFields, qr: QrRead) -> tuple[Any, ...]:
+    payload = qr.payload if qr.status == "ok" else None
+    return (payload.cuit, payload.pto_vta, payload.tipo_cmp, payload.nro_cmp) if payload else (fields.cuit_emisor, fields.pto_vta, fields.tipo, fields.nro)
+
+
+def _in_warehouse(conn: sqlite3.Connection, key: tuple[Any, ...], invoice_key: str | None) -> bool:
+    if conn.execute("SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = 'qr_reads'").fetchone() is None:
+        return False
+    return conn.execute("SELECT 1 FROM qr_reads WHERE status = 'ok' AND cuit = ? AND pto_vta = ? AND tipo_cmp = ? AND nro_cmp = ? AND invoice_key != ?",
+                        (*[str(key[0]), *key[1:]], invoice_key or "")).fetchone() is not None
+
+
+def erp_view(client: Any, fields: InvoiceFields, qr: QrRead, day: date, conn: sqlite3.Connection | None = None, *, invoice_key: str | None = None) -> ErpView:
+    """What the ERP knows of an invoice on the day `day`, asked of `client` (an ``erp.client.ErpClient``): the order the page cites, its receipts dated on or before the day (the future is not
+    asked for), what was already invoiced against it, the supplier of the invoice's CUIT, and the voucher if the warehouse (`conn`: another invoice's valid QR has the same CUIT, point of sale, type and number)
+    or the ERP (a purchase invoice of that supplier with that number) already has it. `invoice_key` is the invoice being decided: its own QR row is not another invoice's."""
+    payload = qr.payload if qr.status == "ok" else None
+    cuit = payload.cuit if payload else fields.cuit_emisor
+    supplier = client.supplier_by_cuit(cuit) if cuit else None
+    suppliers = {cuit: supplier["name"]} if supplier else {}
+    document = client.purchase_order(fields.orden_compra) if fields.orden_compra else None
+    po = order_of(document) if document else None
+    receipts = tuple(receipt_of(r, po.number) for r in client.receipts(po.number, day)) if po else ()
+    invoiced = client.invoiced_quantities(po.number) if po else {}
+    key = _voucher(fields, qr)
+    known: set[tuple[Any, ...]] = set()
+    if None not in key:
+        if conn is not None and _in_warehouse(conn, key, invoice_key):
+            known.add(key)
+        if supplier and client.find_invoice(supplier["name"], bill_no(key[1], key[3])) is not None:
+            known.add(key)
+    return ErpView(po, receipts, invoiced, frozenset(known), suppliers, day)
