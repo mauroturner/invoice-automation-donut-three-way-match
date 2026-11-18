@@ -10,6 +10,7 @@ that the guard that keeps it closed has something to guard; it holds invented re
 
 from __future__ import annotations
 
+import functools
 import io
 import json
 import os
@@ -96,16 +97,28 @@ def write_table(table: pa.Table, path: Path) -> None:
     pq.write_table(table, path, compression="snappy", row_group_size=1000)
 
 
+@functools.cache
+def _fixture_files() -> dict[str, bytes]:
+    """The three files' bytes, made once per process: every test that needs the tiny CORD copies them instead of drawing the receipts again."""
+    made = {}
+    for split, name in FILE_NAMES.items():
+        buffer = io.BytesIO()
+        pq.write_table(pa.Table.from_pylist(rows(split), schema=CORD_SCHEMA), buffer, compression="snappy", row_group_size=1000)
+        made[split] = buffer.getvalue()
+    return made
+
+
 def make_cord_fixture(folder: Path) -> dict[str, Path]:
     """Write the three files into `folder` and return split -> path. The same call gives the same bytes on the same machine."""
     folder.mkdir(parents=True, exist_ok=True)
     paths = {}
     for split, name in FILE_NAMES.items():
         paths[split] = folder / name
-        write_table(pa.Table.from_pylist(rows(split), schema=CORD_SCHEMA), paths[split])
+        paths[split].write_bytes(_fixture_files()[split])
     return paths
 
 
+@functools.cache
 def noise_png(side: int) -> bytes:
     """A PNG that does not compress: random pixels."""
     buffer = io.BytesIO()
@@ -113,6 +126,7 @@ def noise_png(side: int) -> bytes:
     return buffer.getvalue()
 
 
+@functools.cache
 def bomb_png() -> bytes:
     """A PNG whose header declares more pixels than the limit and whose data is a few kilobytes: one bit per pixel, all white."""
     buffer = io.BytesIO()
