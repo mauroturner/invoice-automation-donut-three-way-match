@@ -4,6 +4,7 @@
 # httpx is a runtime pin, not a development one: erp/client.py imports it (plan section 2 sketched it in requirements-dev.txt).
 # Every transitive pin is also at least 14 days old: where the research environment held a newer release, U01 moved it to the newest older one
 # (pydantic 2.14.3 -> 2.14.2 with pydantic-core 2.50.2, click, annotated-doc, typing-inspection, httpx2, httpcore2, markdown-it-py, regex, typer).
+# U21 (D58): python-dateutil 4.0.0 (2026-11-01, under 14 days old) -> 2.9.0.post0, the newest that Airflow 3.4.0's own packages accept (they ask for < 3), so that `pip check` is clean in the Docker image; it needs six, which moved here from requirements-ml.txt.
 # No --hash entries on purpose (project 02, D55). Direct dependencies (the ones src/, research/ and tests/ import) first; the transitive ones under the marker line.
 numpy==2.4.6
 pandas==2.3.3
@@ -36,8 +37,9 @@ opentelemetry-api==1.45.2
 packaging==26.3
 pydantic-core==2.50.2
 pyparsing==3.3.3
-python-dateutil==4.0.0
+python-dateutil==2.9.0.post0
 pytz==2026.6
+six==1.17.0
 starlette==1.10.0
 typing-extensions==4.16.0
 typing-inspection==0.4.4

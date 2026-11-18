@@ -5,7 +5,10 @@ data/warehouse/
 data/models/
 data/erp/
 data/quick/
-docker/.env
+airflow/.env
+airflow/logs/
+airflow/config/
+airflow/plugins/
 reports/validation/history/
 .venv/
 __pycache__/

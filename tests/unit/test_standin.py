@@ -296,3 +296,21 @@ def test_the_names_a_caller_may_give_are_plain_and_a_series_name_counts_up_by_ye
     second = post(world, "Purchase Order", {k: v for k, v in po().items() if k != "name"}).json()["data"]["name"]
     other_year = post(world, "Purchase Order", {k: v for k, v in {**po(), "transaction_date": "2025-01-02"}.items() if k != "name"}).json()["data"]["name"]
     assert (first, second, other_year) == ("PUR-ORD-2026-00001", "PUR-ORD-2026-00002", "PUR-ORD-2025-00001")
+
+
+def test_the_application_of_the_environment_serves_the_erp_file_of_the_configuration_with_the_token_of_the_process(tmp_path, monkeypatch):
+    """U21, D26: in Docker uvicorn calls ``create_app_from_environment`` (``--factory``) in the ``erp`` service: the configuration of ``$INVOICEFLOW_CONFIG`` says where the file is and which variable
+    holds the token; without the token it does not start, as ``standin_app`` itself."""
+    from invoiceflow.erp.standin import create_app_from_environment
+    from tests.fixtures.pipeline_state import clean_clone
+
+    clone = clean_clone(tmp_path / "clone")
+    monkeypatch.setenv("INVOICEFLOW_HOME", str(clone.root))
+    monkeypatch.setenv("INVOICEFLOW_CONFIG", str(clone.root / "config" / "test.toml"))
+    monkeypatch.setenv(clone.cfg.erp.token_env, TOKEN)
+    client = testclient.TestClient(create_app_from_environment(), raise_server_exceptions=False)
+    assert client.get("/api/resource/Supplier").status_code == 401
+    assert client.get("/api/resource/Supplier", headers=AUTH).json() == {"data": []} and clone.cfg.paths.erp_db.is_file()
+    monkeypatch.delenv(clone.cfg.erp.token_env)
+    with pytest.raises(ValueError, match="token"):
+        create_app_from_environment()

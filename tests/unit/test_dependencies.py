@@ -433,7 +433,7 @@ def test_pyproject_declares_the_package_the_pythons_and_the_marks():
 
 
 @pytest.mark.parametrize("entry", [
-    "data/raw/", "data/interim/", "data/warehouse/", "data/models/", "data/erp/", "data/quick/", "docker/.env", "reports/validation/history/",
+    "data/raw/", "data/interim/", "data/warehouse/", "data/models/", "data/erp/", "data/quick/", "airflow/.env", "airflow/logs/", "airflow/config/", "airflow/plugins/", "reports/validation/history/",
     ".venv/", "__pycache__/", ".pytest_cache/",
 ])
 def test_gitignore_keeps_generated_state_and_the_environment_out_of_git(entry):

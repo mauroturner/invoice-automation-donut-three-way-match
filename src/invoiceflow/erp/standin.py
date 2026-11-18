@@ -386,3 +386,14 @@ def standin_app(db_path: Path, token: str | None) -> FastAPI:
         return _error(404, "DoesNotExistError", "No encontrado")
 
     return app
+
+
+def create_app_from_environment() -> FastAPI:
+    """The stand-in of the process: the file of ``[paths] erp_db`` of the configuration of ``$INVOICEFLOW_CONFIG`` and the token of the variable ``[erp] token_env`` names. What uvicorn's ``--factory``
+    calls in the ``erp`` service of the Docker compose file (D26); without the token it does not start."""
+    import os
+
+    from invoiceflow.config import load_config
+
+    cfg = load_config()
+    return standin_app(cfg.paths.erp_db, os.environ.get(cfg.erp.token_env))

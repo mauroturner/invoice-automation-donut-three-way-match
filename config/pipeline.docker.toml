@@ -1,0 +1,8 @@
+# The configuration of the Docker compose project (airflow/docker-compose.yaml; D26): the pipeline's own, with the ERP at the `erp` service of the same compose file instead of the stand-in
+# inside the process. Only [erp] changes, and none of its keys is sealed (config.UNSEALED_KEYS), so the seal and every figure are those of config/pipeline.toml. The token is the variable
+# [erp] token_env names (INVOICEFLOW_ERP_TOKEN), which the compose file takes from the environment of the machine.
+extends = "pipeline.toml"
+
+[erp]
+mode = "http"
+base_url = "http://erp:8001"

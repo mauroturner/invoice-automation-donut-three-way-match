@@ -3,6 +3,7 @@
 # (the CUDA wheel is 2.14.1+cu130, and ==2.14.1 matches its public version; `pip install --dry-run -r requirements-dev.txt` replaces nothing):
 #   Windows with the RTX 3090: python -m pip install torch==2.14.1 --index-url https://download.pytorch.org/whl/cu130
 #   the Docker image (no GPU): python -m pip install torch==2.14.1 --index-url https://download.pytorch.org/whl/cpu
+# U21 (D58): setuptools 78.1.0 -> 84.2.1 (2026-10-20, the one the Airflow 3.4.0 image holds): its providers ask for >= 80, torch for >= 77.0.3.
 # The versions are those of requirements-research.txt. python -m pip install -r requirements-ml.txt installs requirements.txt too.
 -r requirements.txt
 torch==2.14.1
@@ -28,9 +29,8 @@ pygments==2.21.0
 pyyaml==6.0.3
 regex==2026.9.29
 rich==15.0.0
-setuptools==78.1.0
+setuptools==84.2.1
 shellingham==1.5.4
-six==1.17.0
 sympy==1.14.0
 tqdm==4.70.1
 truststore==0.10.5
