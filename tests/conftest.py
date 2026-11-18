@@ -7,6 +7,7 @@ loaded warehouses, the launch and the replayed days, the site files and the rend
 from __future__ import annotations
 
 import gc
+import json
 import os
 import shutil
 from pathlib import Path
@@ -174,3 +175,55 @@ def rendered_html(star_export, tmp_path_factory):
 
     path = render_design(MODEL, star_export.out, tmp_path_factory.mktemp("design") / "powerbi-design.html", star_export.run)
     return SimpleNamespace(path=path, html=path.read_text(encoding="utf-8"))
+
+
+@pytest.fixture(scope="session")
+def site_files(star_export, tmp_path_factory):
+    """The five site files exported once from ``evaluated`` (the star model is already in its warehouse): ``.out``, ``.paths``, ``.site`` (the verified documents) and ``.cord_index``."""
+    from types import SimpleNamespace
+
+    import dataclasses
+
+    from invoiceflow.cord import build_index
+    from invoiceflow.site_export import export_site, read_site
+
+    out = tmp_path_factory.mktemp("site") / "site"
+    state = star_export.state
+    index = build_index(state.cfg, {e.name: "0" * 64 for e in state.cfg.source.cord_files})
+    paths = export_site(state.conn, out, state.run, state.view, seal_path=state.seal, max_total_bytes=204800, cord_index=index, expected_rows=dataclasses.asdict(state.cfg.source.expected_rows))
+    return SimpleNamespace(out=out, paths=paths, site=read_site(out), cord_index=index, state=state)
+
+
+@pytest.fixture(scope="session")
+def figures_written(site_files, tmp_path_factory):
+    """The figures of the documentation drawn once from ``site_files``."""
+    from types import SimpleNamespace
+
+    from invoiceflow.figures import write_figures
+
+    out = tmp_path_factory.mktemp("figures") / "figures"
+    return SimpleNamespace(out=out, paths=write_figures(site_files.out, out))
+
+
+@pytest.fixture
+def before_the_seal(site_files, tmp_path):
+    """The warehouse and the seal as they were before the close: the launch is there, the evaluation is not."""
+    state = site_files.state
+    copy = tmp_path / "warehouse.sqlite"
+    shutil.copy(state.db, copy)
+    from invoiceflow.warehouse import connect
+
+    conn = connect(copy)
+    for table in ("eval_criteria", "eval_invoice", "eval_field", "eval_baseline", "eval_cord", "eval_variants"):
+        for kind in ("no_delete",):
+            conn.execute(f"DROP TRIGGER IF EXISTS {table}_{kind}")
+        conn.execute(f"DELETE FROM {table}")
+    for name in ("star_fact_invoice", "star_fact_field_read", "star_fact_qr_read", "star_fact_baseline", "star_fact_cord_eval", "star_fact_evaluation_summary"):
+        conn.execute(f"DELETE FROM {name}")
+    seal = tmp_path / "model_seal.json"
+    document = json.loads(state.seal.read_text(encoding="utf-8"))
+    document.pop("test")
+    seal.write_text(json.dumps(document), encoding="utf-8")
+    return conn, seal, state
+
+

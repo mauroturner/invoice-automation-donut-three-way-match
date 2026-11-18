@@ -714,6 +714,8 @@ Cinco archivos en `outputs/site/` y al final `manifest.json`; el procedimiento d
 
 **Antes del sello, nada de la prueba**: criterios, líneas base, CORD de prueba y la mezcla de revisión van `null` o vacíos hasta `evaluation_status = sealed`; `days[]` muestra los días ya corridos (es seguimiento). Contrato: `tests/contract/test_site_export.py` y `tests/integration/test_published_bytes.py` (ninguna ruta local, ninguna imagen de CORD, todo CUIT en el rango sintético). El sitio copia estos archivos: cambiar su forma después es de riesgo alto (ítem 3).
 
+**Nota del 2026-11-18 (U18, D55)**: `headline.seconds_per_invoice_gpu` se llama `seconds_per_invoice` (con `seconds_p95` y una nota: es tiempo de procesamiento, en CPU o en GPU según la corrida); cada objeto con un número lleva `synthetic` (`true` o `false`) o está dentro de uno que lo lleva; `export_site` recibe además `cord_index`, `expected_rows` y `smoke_erpnext`; y la factura de ejemplo se regenera con el generador (cajas como fracción de la página, sin imagen).
+
 ## 22. Orquestación
 
 ```python
