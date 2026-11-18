@@ -322,6 +322,8 @@ Tres lugares, cada uno para lo suyo (D24): **archivos** para las facturas y la v
 
 `sql/schema/003_eval.sql`: `eval_criteria` (`criterion_id`, `seal_state`), `eval_invoice` (`invoice_key`, `seal_state`: la verdad unida a lo emitido, una fila por factura de la prueba con `cohort`, `planted`, `expected_decision`, `decision`, `bad_post`, `straight_through`, `line_exact`, `lines`), `eval_field` (`cohort`, `field`, `seal_state`), `eval_baseline` (`baseline`, `cohort`, `seal_state`), `eval_cord` (`model`, `receipt_key`, `seal_state`), `eval_variants` (`variant`, `key`, `seal_state`); `seal_state` en `sealed`, `post_seal`; las filas `sealed` son de solo inserción.
 
+**Nota del 2026-11-18 (U12, D49)**: `load` escribe además `validation_results`; `validation_results` e `invoices` son también de solo inserción; `invoice_key` es el nombre del archivo sin extensión; `review_queue` es una vista; los importes son texto decimal.
+
 `model_registry` (`model_version`) en `002_flow.sql`: `trained_as_of`, `artifact_name`, `artifact_sha256`, `tokenizer_sha256`, `config_sha256`, `chosen_epoch`, `choice_json` (cada candidata con sus cifras de validación y `fit_splits`), `validation_digest`.
 
 ## 6. Contrato de las fuentes, las entregas y la validación
