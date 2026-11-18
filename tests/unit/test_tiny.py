@@ -132,3 +132,19 @@ def test_register_is_idempotent_and_a_tiny_kind_nobody_registered_is_refused(qui
     extractors.unregister("tiny")
     with pytest.raises(ExtractorError, match="tiny"):
         make_extractor(quick_view, {}, "models")
+
+
+def test_the_checkpoint_extractor_of_a_tiny_model_reads_its_short_length_and_a_real_one_max_length(quick_view, tiny_kit):
+    """The four reads of a quick launch's checkpoint (the CORD twin) run to the decoding limit too, because the tiny model never emits the end token (D31, 2026-11-18). The tiny kind reads
+    ``read_length``, the real kinds keep ``[model] max_length``; the rest of the extractor (task token, device, model version, eval mode) is unchanged."""
+    import dataclasses
+
+    from invoiceflow.launch import _checkpoint_extractor
+    from invoiceflow.model.tiny import READ_LENGTH, read_length
+
+    extractor = _checkpoint_extractor(quick_view, tiny_kit.processor, tiny_kit.model)
+    assert extractor.max_length == read_length(quick_view) == READ_LENGTH and extractor.task_token == quick_view.model.task_cord
+    assert extractor.device == "cpu" and extractor.model_version == "checkpoint" and not extractor.model.training
+    real_kind = dataclasses.replace(quick_view, model=dataclasses.replace(quick_view.model, kind="donut", infer_device="cpu"))
+    real = _checkpoint_extractor(real_kind, tiny_kit.processor, tiny_kit.model)
+    assert real.max_length == quick_view.model.max_length and real.task_token == quick_view.model.task_cord and real.device == "cpu" and real.model_version == "checkpoint"

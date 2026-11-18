@@ -188,7 +188,12 @@ def _checkpoint_extractor(view: SealedConfig, processor: Any, model: Any) -> Any
 
     device = "cpu" if view.model.kind == "tiny" else resolve_device(view.model.infer_device, torch.cuda.is_available())
     model.eval().to(device)
-    return DonutExtractor(model=model, processor=processor, task_token=view.model.task_cord, max_length=view.model.max_length, device=device, model_version="checkpoint",
+    max_length = view.model.max_length
+    if view.model.kind == "tiny":                       # the tiny double never emits the end token: its four reads stop at its own short length (D31)
+        from invoiceflow.model.tiny import read_length
+
+        max_length = read_length(view)
+    return DonutExtractor(model=model, processor=processor, task_token=view.model.task_cord, max_length=max_length, device=device, model_version="checkpoint",
                           no_grad=torch.no_grad)
 
 
