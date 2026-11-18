@@ -153,3 +153,31 @@ def test_the_module_reads_no_float():
 
     source = inspect.getsource(normalize)
     assert "float(" not in source and "float " not in source.replace("# ", ""), "an amount is a Decimal from the first character"
+
+
+def test_a_long_description_or_company_name_survives_and_only_the_numeric_date_and_cuit_parsers_keep_their_length_guard():
+    """L98: ``_clean`` capped every text at 40 characters and gave ``None`` above it, so a long description or company name became «missing» (``extraction_incomplete``).
+    The guard belongs to the parsers of figures; a free text is what the model read, bounded by the decoder's ``max_length`` (D46, M05)."""
+    description = "Tornillo hexagonal acero inoxidable 8 x 120 mm con arandela de presion y tuerca"
+    company = "Distribuidora Industrial del Litoral Sociedad Anonima Comercial e Importadora (ficticia)"
+    code, unit, currency = "ART-" + "0" * 56, "caja de cartón x" + "0" * 44, "PES" + " " + "x" * 56
+    assert len(description) > 60 and len(company) > 60 and len(code) == 60 and len(unit) == 60
+    raw = {**RAW, "header": {**RAW["header"], "razon_social": company, "moneda": currency, "orden_compra": "OC-2026-000123"},
+           "lines": [{**RAW["lines"][0], "descripcion": description, "codigo": code, "unidad": unit}, RAW["lines"][1]]}
+    fields = normalize_fields(raw)
+    assert fields.razon_social == company and fields.moneda == currency
+    assert (fields.lines[0].descripcion, fields.lines[0].codigo, fields.lines[0].unidad) == (description, code, unit)
+    assert fields.complete and fields.missing == ()
+    only_description = normalize_fields({**raw, "lines": [{**RAW["lines"][0], "codigo": None, "descripcion": "x" * 60}, RAW["lines"][1]]})
+    assert only_description.complete and only_description.lines[0].descripcion == "x" * 60, "a 60-character description alone still matches the line"
+    assert normalize_fields({**RAW, "header": {**RAW["header"], "razon_social": "  " + company + "  \t"}}).razon_social == company, "trimmed, as before"
+    assert normalize_fields({**RAW, "header": {**RAW["header"], "razon_social": "   "}}).razon_social is None, "a blank text is still nothing"
+
+
+def test_the_length_guard_of_the_numeric_date_and_cuit_parsers_is_the_one_it_was():
+    assert normalize.MAX_TEXT == 40
+    assert parse_amount("$" + " " * 31 + "1.234,56") == Decimal("1234.56"), "40 characters is the last one read"
+    assert parse_amount("$" + " " * 32 + "1.234,56") is None, "a text over 40 characters is no amount, whatever it holds"
+    assert parse_quantity("1" + "0" * 40) is None and parse_quantity(" " * 50 + "7" + " " * 50) == Decimal("7"), "the whitespace around is not counted"
+    assert parse_date("14/10/2026" + " " * 30 + "x") is None and parse_date("14/10/2026") == date(2026, 10, 14)
+    assert parse_cuit("30000000007" + "0" * 30) is None and parse_cuit("30" + " " * 40 + "00000007") is None

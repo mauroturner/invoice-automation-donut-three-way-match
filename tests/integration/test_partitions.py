@@ -171,3 +171,15 @@ def test_the_duplicates_come_from_an_earlier_day_and_never_from_the_first_one(vi
         assert truth.received_on > first_day
         source = next(t for t in by_voucher[(truth.split, truth.header.cuit_emisor, truth.header.pto_vta, truth.header.tipo, truth.header.nro)] if t is not truth)
         assert source.planted == "none" and source.received_on < truth.received_on
+
+
+def test_every_invoices_cohort_is_its_suppliers_and_the_split_keeps_its_own_name(everything, quick_master):
+    """L98: the truth's cohort was the split name (``test_known``) while the suppliers carry ``known``, ``new_validation`` and ``new_test``. One vocabulary: the
+    cohort is the supplier's (the plan's ``dim_supplier.cohort``), and the split (``test_known``, ``test_new``: the plan's ``dim_cohort.cohort_key``) is its own field."""
+    cohort_of = {s.supplier_key: s.cohort for s in quick_master.suppliers}
+    expected = {"train": "known", "validation_known": "known", "test_known": "known", "validation_new": "new_validation", "test_new": "new_test"}
+    for split, truths in everything.items():
+        assert truths, split
+        for truth in truths:
+            assert truth.split == split
+            assert truth.cohort == cohort_of[truth.supplier_key] == expected[split], (split, truth.invoice_key)

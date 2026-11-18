@@ -99,8 +99,8 @@ class InvoiceTotals:
 @dataclass(frozen=True)
 class InvoiceTruth:
     invoice_key: str               # ``<split>-<ordinal>``
-    split: str
-    cohort: str
+    split: str                     # ``train``, ``validation_known``, ``validation_new``, ``test_known`` or ``test_new`` (the evaluation's ``cohort_key``)
+    cohort: str                    # the supplier's: ``known``, ``new_validation`` or ``new_test`` (the plan's ``dim_supplier.cohort``)
     supplier_key: str
     layout: str
     font: str
@@ -418,7 +418,8 @@ class _World:
             "moneda": currency, "ctz": header.cotizacion, "tipoDocRec": RECEIVER_DOCUMENT_TYPE, "nroDocRec": int(header.cuit_receptor), "tipoCodAut": "E",
             "codAut": int(cae)})
         reasons = FIRST_REASON.get(planted, ())
-        return InvoiceTruth(key, split, split, supplier.supplier_key, supplier.layout, supplier.font, slot.received_on, po.po_number, header, lines_tuple, totals,
+        assert supplier.cohort == COHORT_OF[split], (split, supplier.cohort)   # the partition's owners are the cohort's suppliers (D44)
+        return InvoiceTruth(key, split, supplier.cohort, supplier.supplier_key, supplier.layout, supplier.font, slot.received_on, po.po_number, header, lines_tuple, totals,
                             qr, qr_cm, profile, file_format, planted, "review" if planted != "none" else "auto_post", reasons)
 
 

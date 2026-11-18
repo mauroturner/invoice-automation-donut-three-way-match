@@ -22,7 +22,7 @@ from decimal import ROUND_HALF_UP, Decimal
 from typing import Any
 
 CENT = Decimal("0.01")
-MAX_TEXT = 40
+MAX_TEXT = 40            # the longest text a parser of a figure (an amount, a quantity, a date, a CUIT) reads; a free text has no cap here (L98)
 MAX_DIGITS = 15          # more integer digits than any amount of an invoice: a guard, and it keeps Decimal inside its precision
 _WHITESPACE = " \t "
 _CURRENCY = re.compile(r"(?:US\$|U\$S|\$|USD|ARS|PES|DOL)", re.IGNORECASE)
@@ -35,17 +35,17 @@ _ELEVEN_DIGITS = re.compile(r"[0-9]{11}")
 _DIGITS = re.compile(r"[0-9]+")
 
 
-def _clean(text: Any) -> str | None:
-    """The text trimmed, or None when it is not a text, is empty or is longer than any figure of an invoice."""
+def _clean(text: Any, limit: int | None = None) -> str | None:
+    """The text trimmed, or None when it is not a text, is empty or (with a `limit`) is longer than that."""
     if not isinstance(text, str):
         return None
     text = text.strip(_WHITESPACE)
-    return text if 0 < len(text) <= MAX_TEXT else None
+    return text if text and (limit is None or len(text) <= limit) else None
 
 
 def parse_amount(text: Any) -> Decimal | None:
     """``1.234,56`` -> ``Decimal("1234.56")``; None when the text is not an amount in the printed form (see the module's text)."""
-    text = _clean(text)
+    text = _clean(text, MAX_TEXT)
     if text is None:
         return None
     text = _CURRENCY.sub("", text, count=1).strip(_WHITESPACE) if _CURRENCY.match(text) else text
@@ -61,7 +61,7 @@ def parse_amount(text: Any) -> Decimal | None:
 
 def parse_quantity(text: Any) -> Decimal | None:
     """``12`` -> ``Decimal("12")``, ``2,5`` -> ``Decimal("2.5")``, ``1.000`` -> ``Decimal("1000")``; None otherwise (up to three decimals, no sign)."""
-    text = _clean(text)
+    text = _clean(text, MAX_TEXT)
     match = _QUANTITY.fullmatch(text) if text is not None else None
     if match is None:
         return None
@@ -73,7 +73,7 @@ def parse_quantity(text: Any) -> Decimal | None:
 
 def parse_date(text: Any) -> date | None:
     """``14/10/2026`` or ``2026-10-14`` -> ``date(2026, 10, 14)``; None when it is not one of those or not a day of the calendar."""
-    text = _clean(text)
+    text = _clean(text, MAX_TEXT)
     if text is None:
         return None
     try:
@@ -90,7 +90,7 @@ def parse_date(text: Any) -> date | None:
 
 def parse_cuit(text: Any) -> str | None:
     """Eleven digits, hyphens, dots and spaces dropped: ``30-00001234-5`` -> ``30000012345``; None otherwise. The check digit is not looked at."""
-    text = _clean(text)
+    text = _clean(text, MAX_TEXT)
     if text is None:
         return None
     digits = _CUIT_SEPARATORS.sub("", text)
@@ -98,13 +98,13 @@ def parse_cuit(text: Any) -> str | None:
 
 
 def _integer(text: Any) -> int | None:
-    text = _clean(text)
+    text = _clean(text, MAX_TEXT)
     return int(text) if text is not None and _DIGITS.fullmatch(text) else None
 
 
 def _text(value: Any) -> str | None:
-    text = _clean(value) if isinstance(value, str) else None
-    return text
+    """A free text (a description, a code, a company name, a currency, the order number, the CAE): trimmed, never cut or dropped for its length."""
+    return _clean(value)
 
 
 @dataclass(frozen=True)

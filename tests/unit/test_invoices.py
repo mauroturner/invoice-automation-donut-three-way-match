@@ -304,7 +304,7 @@ def test_the_issuer_comes_from_the_master_and_the_layout_and_font_are_the_suppli
         supplier = suppliers[truth.supplier_key]
         assert (truth.header.cuit_emisor, truth.header.razon_social, truth.layout, truth.font) == (supplier.cuit, supplier.name_es, supplier.layout, supplier.font)
         assert truth.header.cuit_receptor == default_master.buyer.cuit and truth.header.pto_vta in supplier.points_of_sale
-        assert truth.split == truth.cohort == "train" and truth.invoice_key.startswith("train-")
+        assert truth.split == "train" and truth.cohort == "known" and truth.invoice_key.startswith("train-")
 
 
 def test_a_scan_profile_keeps_a_clean_page_and_spoils_the_others_in_their_own_way(quick_view, quick_train):
