@@ -83,3 +83,4 @@ def test_the_module_reads_no_float_into_an_amount():
 
     source = inspect.getsource(metrics.parse_money)
     assert "float(" not in source
+

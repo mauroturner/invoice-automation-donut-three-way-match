@@ -130,3 +130,30 @@ def test_reading_the_truth_from_a_flow_task_raises(tmp_path):
         exec("def task(read, path):\n    return read(path)\n", module.__dict__)
         assert module.task(read_truth, path) == items
     assert dataclasses.is_dataclass(items[0])
+
+
+def test_a_receipt_dated_after_the_day_does_not_count(quick_view, tmp_path_factory):
+    """AC11, U15: the ERP holds the receipts of the whole master (the future ones too), and an invoice that arrives between the two receipts of its order is looked at with the first only (it is over what was received): the same
+    invoice with a later day is looked at with both. A daily run that asked for the receipts of the delivery's day (not of today) would post what was not yet in the warehouse."""
+    from invoiceflow.baselines import truth_fields, truth_qr
+    from invoiceflow.decide import decide
+    from invoiceflow.match import erp_view
+    from tests.fixtures.daily_world import build_world, fresh_erp, with_days
+    from datetime import date, timedelta
+
+    view = with_days(quick_view, date(2026, 10, 7))
+    world = build_world(view, tmp_path_factory.mktemp("future"))
+    client, _ = fresh_erp(world, tmp_path_factory.mktemp("future_erp"))
+    receipts_of: dict[str, list] = {}
+    for receipt in world.master.receipts:
+        receipts_of.setdefault(receipt.po_number, []).append(receipt)
+    truth = next(t for t in world.all_truths() if t.planted == "none" and len(receipts_of[t.po_number]) == 2)
+    first, last = sorted(r.receipt_date for r in receipts_of[truth.po_number])
+    assert first < last and last <= truth.received_on, "the invoice of a correct order arrives with the last receipt in"
+    fields, qr = truth_fields(truth), truth_qr(truth, view)
+    early = erp_view(client, fields, qr, last - timedelta(days=1))
+    late = erp_view(client, fields, qr, truth.received_on)
+    assert [r.date for r in early.receipts_until_day] == [first] and sorted(r.date for r in late.receipts_until_day) == [first, last]
+    reasons_early = [r.code for r in decide(fields, qr, early, view).reasons]
+    assert "qty_over_receipt" in reasons_early and decide(fields, qr, late, view).decision == "auto_post", reasons_early
+    assert len(client.receipts(truth.po_number, last + timedelta(days=30))) == 2, "the ERP does have the later receipt: it is the match that does not count it"
