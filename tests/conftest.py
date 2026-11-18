@@ -23,6 +23,11 @@ pytest_plugins = ["pytester"]
 # changes no value and no test (project 04, D93).
 gc.set_threshold(200_000, 100, 100)
 
+# The tiny model's tensors are a few dozen numbers wide, and on a machine with many cores torch's threads spend more time handing them over than computing them (D31, the speed
+# unit). The session asks for one thread unless the environment already names a number; torch reads it when it is first imported. Every figure a test compares is computed in this
+# session under the same setting; the real model runs on the GPU and nothing in the configuration changes.
+os.environ.setdefault("OMP_NUM_THREADS", "1")
+
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 RAW_CORD = PROJECT_ROOT / "data" / "raw" / "cord"
 CHECKPOINT_CACHE = Path.home() / ".cache" / "huggingface" / "hub" / "models--naver-clova-ix--donut-base-finetuned-cord-v2"
