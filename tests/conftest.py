@@ -108,3 +108,19 @@ def quick_view(quick_cfg):
     from invoiceflow.config import SealedConfig
 
     return SealedConfig.of(quick_cfg, tuple("0" * 64 for _ in quick_cfg.source.cord_files), "0" * 64)
+
+
+@pytest.fixture(scope="session")
+def default_master(view):
+    """The master of the default configuration (63 suppliers, about 4,400 orders), made once: it is a pure function of the view."""
+    from invoiceflow.synth.master import master
+
+    return master(view)
+
+
+@pytest.fixture(scope="session")
+def quick_master(quick_view):
+    """The master of the quick configuration, made once."""
+    from invoiceflow.synth.master import master
+
+    return master(quick_view)

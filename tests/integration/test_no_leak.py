@@ -97,3 +97,36 @@ def test_no_module_but_the_closing_evaluation_reads_the_test_split():
                 if name == "read_split" and any(isinstance(arg, ast.Constant) and arg.value == "test" for arg in [*node.args, *(k.value for k in node.keywords)]):
                     offenders.append(f"{path.relative_to(SRC).as_posix()}:{node.lineno}")
     assert [o for o in offenders if o.split(":")[0] != "evaluation.py"] == []
+
+
+TRUTH_READERS = ("invoiceflow.evaluation", "invoiceflow.baselines")
+FLOW_TASKS = ("invoiceflow.extract", "invoiceflow.qr", "invoiceflow.match", "invoiceflow.decide", "invoiceflow.erp.client", "invoiceflow.erp.standin", "invoiceflow.daily",
+              "invoiceflow.launch", "invoiceflow.api", "invoiceflow.pipeline", "invoiceflow.model.extractors", "invoiceflow.deliveries", "invoiceflow.validate")
+
+
+def test_reading_the_truth_from_a_flow_task_raises(tmp_path):
+    """AC10, at run time: a task of the flow that opens the synthetic truth, by any of its names, gets a ``LeakageError`` that names it; the evaluation and the
+    baselines read it. The static half (no flow module imports the reader) is ``tests/unit/test_truth.py``."""
+    from invoiceflow.truth import read_truth, write_truth
+    from invoiceflow.synth.invoices import invoices
+    from invoiceflow.config import load_config
+    import dataclasses
+
+    cfg = load_config(Path(__file__).resolve().parents[2] / "config" / "pipeline.quick.toml")
+    from invoiceflow.config import SealedConfig
+    from invoiceflow.synth.master import master
+
+    view = SealedConfig.of(cfg, tuple("0" * 64 for _ in cfg.source.cord_files), "0" * 64)
+    path = tmp_path / "truth" / "D2026-10-01.jsonl"
+    items = invoices(view, master(view), "train", None, seal_path=tmp_path / "none.json")
+    write_truth(path, items)
+    for name in FLOW_TASKS:
+        module = types.ModuleType(name)
+        exec("def task(read, path):\n    return read(path)\n", module.__dict__)
+        with pytest.raises(LeakageError, match=name.replace(".", r"\.")):
+            module.task(read_truth, path)
+    for name in TRUTH_READERS:
+        module = types.ModuleType(name)
+        exec("def task(read, path):\n    return read(path)\n", module.__dict__)
+        assert module.task(read_truth, path) == items
+    assert dataclasses.is_dataclass(items[0])

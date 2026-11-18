@@ -4,13 +4,15 @@ The six Parquet files of CORD and the PDF of ARCA's specification are untrusted 
 ``research/s08_arca_docs.py`` do, runbook R1), reads local files only and does not read a byte of one before its size and its SHA-256 are the accepted ones.
 
 * ``check_sources`` is V01 (and V06 for the PDF): every file exists and has the accepted size and hash or, in quick mode (an empty accepted hash, a source
-  under ``data/quick/``), the size and hash registered in ``source.lock.json`` by the first good view. The size is compared first: a file of another size is
-  never hashed. The byte cap of V03 (``max_shard_bytes``) is held before any file is hashed. It writes nothing.
+  under ``data/quick/``), the size and hash registered in ``source.lock.json`` by the first good view; and the specification's example reproduces through
+  ``synth.qrpayload``, byte for byte (the other half of V06). The size is compared first: a file of another size is never hashed. The byte cap of V03
+  (``max_shard_bytes``) is held before any file is hashed. It writes nothing.
 * ``fetch_source`` checks the sources, checks the footers (V02, V03, V05: ``cord.check_footers``), builds the canonical index of the train and validation
   splits and writes it, with its manifest last, only when it is missing or is not the one these hashes give, and registers the quick-mode hashes only after
   all of that went without a failing rule. A rejected source writes nothing and leaves what was there untouched. The test split's rows are never opened.
 
-The exact reproduction of the specification's example (the other half of V06) is added with the QR payload writer, in U06.
+The other half of V06 is the exact reproduction of the specification's example by the QR payload writer (``synth.qrpayload.reproduce_spec_example``): the
+size and the hash say the PDF is the one that was read, and the example says the writer writes what the PDF specifies. ``check_sources`` holds both.
 """
 
 from __future__ import annotations
@@ -22,6 +24,7 @@ from typing import Any
 
 from invoiceflow.config import PipelineConfig
 from invoiceflow.files import sha256_file, write_atomic
+from invoiceflow.synth import qrpayload
 
 LOCK_NAME = "source.lock.json"
 LOCK_VERSION = 1
@@ -127,6 +130,10 @@ def check_sources(cfg: PipelineConfig) -> dict[str, str]:
             raise rule(rule_id, f"el archivo {path} tiene la huella SHA-256 {digest} y la {what} es {expected}; no se cambió nada", path=str(path),
                        file=path.name, reason="sha256", expected=expected, actual=digest)
         digests[key] = digest
+    try:
+        qrpayload.reproduce_spec_example()
+    except ValueError as error:
+        raise rule("V06", f"el ejemplo de la especificación de ARCA no se reproduce con synth.qrpayload: {error}", reason="spec_example") from error
     return digests
 
 
