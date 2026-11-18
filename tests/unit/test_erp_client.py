@@ -217,3 +217,25 @@ def test_create_invoice_itself_refuses_anything_but_a_draft_before_a_request():
     assert seen == []
     client.create_invoice({k: v for k, v in sent().items() if k != "docstatus"})
     assert len(seen) == 1 and b'"docstatus":0' in seen[0].content.replace(b" ", b"") and seen[0].headers["authorization"] == "token k:s"
+
+
+def test_a_parent_that_matches_a_child_table_filter_once_per_row_is_one_receipt_and_one_invoice():
+    """U22, D50 (a): real ERPNext answers a filter on a child table with the parent once for every child row that matches (a receipt of two rows of the same order is listed twice); the stand-in
+    lists it once. Counted twice, a receipt would double what was received and let a quantity through, so each document is read and counted once whatever the list says."""
+    import json
+
+    def handler(request):
+        path = request.url.path.replace("%20", " ")
+        if path.endswith("/Purchase Receipt"):
+            return httpx.Response(200, json={"data": [{"name": "R1", "posting_date": "2026-10-05"}, {"name": "R1", "posting_date": "2026-10-05"}, {"name": "R2", "posting_date": "2026-10-04"}]})
+        if path.endswith("/Purchase Invoice"):
+            return httpx.Response(200, json={"data": [{"name": "I1"}, {"name": "I1"}]})
+        if path.endswith("/Purchase Receipt/R1"):
+            return httpx.Response(200, text=json.dumps({"data": {"name": "R1", "posting_date": "2026-10-05", "items": []}}))
+        if path.endswith("/Purchase Receipt/R2"):
+            return httpx.Response(200, text=json.dumps({"data": {"name": "R2", "posting_date": "2026-10-04", "items": []}}))
+        return httpx.Response(200, text=json.dumps({"data": {"items": [{"item_code": "A1", "qty": 4, "purchase_order": "OC-1"}, {"item_code": "A1", "qty": 3, "purchase_order": "OC-1"}]}}))
+
+    client = mock(handler)
+    assert [r["name"] for r in client.receipts("OC-1", date(2026, 10, 31))] == ["R2", "R1"]
+    assert client.invoiced_quantities("OC-1") == {"A1": D("7")}, "the invoice of two rows is counted once, not twice"

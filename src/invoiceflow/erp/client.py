@@ -87,6 +87,11 @@ def _decimal(value: Any) -> Decimal:
     return value if isinstance(value, Decimal) else Decimal(str(value))
 
 
+def _once(rows: list[dict[str, Any]]) -> list[str]:
+    """The names of `rows` without repeats, in order: a filter on a child table lists the parent once per matching row in ERPNext (D50), and a document must be read and counted once."""
+    return list(dict.fromkeys(row["name"] for row in rows))
+
+
 def _encode(value: Any) -> Any:
     if isinstance(value, Decimal):
         return int(value) if value == value.to_integral_value() and abs(value) < 10**15 and value.as_tuple().exponent >= 0 else float(value)
@@ -161,7 +166,7 @@ class ErpClient:
     def receipts(self, po_name: str, until: date) -> list[dict[str, Any]]:
         """The submitted purchase receipts of the order dated on or before `until`, each with its rows, by date and name."""
         rows = self._list(RECEIPT, [["Purchase Receipt Item", "purchase_order", "=", po_name], ["posting_date", "<=", until.isoformat()], ["docstatus", "=", 1]], ["name", "posting_date"])
-        documents = [self._get(RECEIPT, row["name"]) for row in rows]
+        documents = [self._get(RECEIPT, name) for name in _once(rows)]
         return sorted((doc for doc in documents if doc is not None), key=lambda doc: (doc["posting_date"], doc["name"]))
 
     def find_invoice(self, supplier: str, bill_no: str) -> dict[str, Any] | None:
@@ -173,8 +178,8 @@ class ErpClient:
         """What was already invoiced against the order: the quantity of each item of its non-cancelled purchase invoices."""
         rows = self._list(INVOICE, [["Purchase Invoice Item", "purchase_order", "=", po_name], ["docstatus", "!=", 2]], ["name"])
         quantities: dict[str, Decimal] = {}
-        for row in rows:
-            document = self._get(INVOICE, row["name"])
+        for name in _once(rows):
+            document = self._get(INVOICE, name)
             for item in (document or {}).get("items", []):
                 if item.get("purchase_order") == po_name:
                     quantities[item["item_code"]] = quantities.get(item["item_code"], Decimal(0)) + _decimal(item["qty"])
