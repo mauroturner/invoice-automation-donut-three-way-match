@@ -38,6 +38,31 @@ def _no_flush_to_the_device():
         yield
 
 
+@pytest.fixture(scope="session", autouse=True)
+def _each_page_rendered_once():
+    """``render(truth, view)`` is a pure function of the truth and the view (``tests/unit/test_invoices.py`` pins it: the same seed gives the same bytes), and drawing a page, with its QR, is
+    most of what a launch, a delivery or a world of the tests spends outside the model (D31, the speed unit). The launch, the pipeline and the extractor of the tests get the bytes of a
+    page they already asked for in this session instead of drawing it again; the bytes are the same ones. ``invoiceflow.synth.render.render`` itself stays as it is, so the tests of the
+    generator draw every page; a test that replaces ``render`` in one of those modules replaces this one."""
+    from invoiceflow import launch, pipeline
+    from invoiceflow.synth import render as rendering
+    from tests.fixtures import stub_extractor
+
+    real = rendering.render
+    pages: dict = {}
+
+    def render_once(truth, view):
+        key = (truth, view)
+        if key not in pages:
+            pages[key] = real(truth, view)
+        return pages[key]
+
+    with pytest.MonkeyPatch.context() as patch:
+        for module in (launch, pipeline, stub_extractor):
+            patch.setattr(module, "render", render_once)
+        yield
+
+
 def _cuda_missing() -> bool:
     try:
         import torch

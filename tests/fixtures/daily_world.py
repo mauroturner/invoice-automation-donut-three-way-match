@@ -3,6 +3,7 @@ holds the whole master (the receipts of later days too: what the match may know 
 
 from __future__ import annotations
 
+import copy
 import dataclasses
 import hashlib
 import shutil
@@ -22,7 +23,7 @@ from invoiceflow.synth.master import master as make_master
 from tests.fixtures.erp_world import load_world, standin_client
 from tests.fixtures.loads import report_of
 from tests.fixtures.seals import write_launch_seal
-from tests.fixtures.stub_extractor import EXTENSIONS, StubExtractor, page_key
+from tests.fixtures.stub_extractor import EXTENSIONS, StubExtractor, page_key, seed_error
 
 CONFIG_SHA = "b" * 64
 
@@ -51,18 +52,59 @@ class DailyWorld:
         return [t for day in self.days for t in self.truths[day]]
 
 
+@dataclass(frozen=True)
+class _Base:
+    """What a world is made of that depends only on its view: built once per view and per session in a folder of its own, and copied into each world (D31, the speed unit)."""
+
+    master: object
+    days: list[date]
+    truths: dict[date, list]
+    files: Path
+    erp: Path                           # the folder of the stand-in's database, loaded with the master
+    trees: dict[str, dict]              # invoice_key -> what the extractor of the tests answers for its page, with no error
+    pages: dict[str, str]               # invoice_key -> the key of its page
+    qr_by_page: dict
+
+
+_BASES: dict[SealedConfig, _Base] = {}
+
+
+def _base(view: SealedConfig, folder: Path) -> _Base:
+    if view not in _BASES:
+        master = make_master(view)
+        seal = write_launch_seal(folder / "seal" / "model_seal.json", view)
+        specs = [s for s in delivery_plan(view) if s.kind == "daily"]
+        truths = {s.day: sorted(invoices(view, master, "test_known", s.day, seal_path=seal) + invoices(view, master, "test_new", s.day, seal_path=seal), key=lambda t: t.invoice_key)
+                  for s in specs}
+        everything = [t for s in specs for t in truths[s.day]]
+        files = folder / "files"
+        extractor = StubExtractor.from_truths(everything, view, files)
+        erp = load_world(view, master, everything, folder / "template")
+        erp.http.close()
+        pages = {t.invoice_key: page_key(load_page(files / f"{t.invoice_key}{EXTENSIONS[t.file_format]}", view)) for t in everything}
+        qr = {pages[t.invoice_key]: truth_qr(t, view) for t in everything}
+        trees = {key: extractor.readings[page] for key, page in pages.items()}
+        _BASES[view] = _Base(master, [s.day for s in specs], truths, files, erp.db.parent, trees, pages, qr)
+    return _BASES[view]
+
+
 def build_world(view: SealedConfig, root: Path, *, errors: dict[str, str] | None = None) -> DailyWorld:
-    master = make_master(view)
-    seal = write_launch_seal(root / "seal" / "model_seal.json", view)
-    specs = [s for s in delivery_plan(view) if s.kind == "daily"]
-    truths = {s.day: sorted(invoices(view, master, "test_known", s.day, seal_path=seal) + invoices(view, master, "test_new", s.day, seal_path=seal), key=lambda t: t.invoice_key)
-              for s in specs}
-    everything = [t for s in specs for t in truths[s.day]]
+    """The world of `view` under `root`: its seal, the files of every day's invoices, the extractor of the tests (with the `errors` it is told to seed) and the stand-in's template.
+    What depends only on the view (the master, the truths, the pages, the stand-in loaded with the master and the QR of each page) is made once per session (``_base``) and copied
+    here, so each world has files and a template of its own."""
+    root = Path(root)
+    base = _base(view, root.parent / f"{root.name}-base")
+    write_launch_seal(root / "seal" / "model_seal.json", view)
     files = root / "files"
-    extractor = StubExtractor.from_truths(everything, view, files, errors=errors)
-    erp = load_world(view, master, everything, root / "template")
-    qr = {page_key(load_page(files / f"{t.invoice_key}{EXTENSIONS[t.file_format]}", view)): truth_qr(t, view) for t in everything}
-    return DailyWorld(view, master, [s.day for s in specs], truths, files, extractor, erp.db, root, qr)
+    shutil.copytree(base.files, files)
+    shutil.copytree(base.erp, root / "template" / "erp")
+    readings = {}
+    for key, page in base.pages.items():
+        kind = (errors or {}).get(key)
+        readings[page] = seed_error(base.trees[key], kind) if kind else copy.deepcopy(base.trees[key])
+    truths = {day: list(items) for day, items in base.truths.items()}
+    return DailyWorld(view, base.master, list(base.days), truths, files, StubExtractor(readings), root / "template" / "erp" / "standin.sqlite", root,
+                      dict(base.qr_by_page))
 
 
 def fresh_erp(world: DailyWorld, folder: Path):
