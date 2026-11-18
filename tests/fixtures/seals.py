@@ -34,7 +34,7 @@ def launch_document(view: SealedConfig, **changes) -> dict:
         "choice": {"chosen_epoch": 2, "score": 0.5123456789, "floor": 91.65, "checkpoint_cord_ted": 93.65, "cord_val_tolerance": 2.0,
                    "candidates": [{"epoch": 1, "cord_ted": 92.1, "exact_known": 0.4, "exact_new": 0.1, "score": 0.25, "status": "kept", "fit_splits": "cord_train+synth_train"},
                                   {"epoch": 2, "cord_ted": 93.0, "exact_known": 0.9, "exact_new": 0.1246913578, "score": 0.5123456789, "status": "kept", "fit_splits": "cord_train+synth_train"}]},
-        "checkpoint_cord_val": {"ted": 93.65, "receipts": 100}, "oracle_validation": {"invoices": 300, "wrong": 0}, "validation_digest": "d" * 64,
+        "checkpoint_cord_val": {"ted": 93.65, "receipts": 100, "fit_splits": "checkpoint"}, "oracle_validation": {"invoices": 300, "planted": 70, "posted": 230, "wrong": 0, "fit_splits": "none"}, "validation_digest": "d" * 64,
     }
     return {**base, **changes}
 
@@ -45,3 +45,15 @@ def write_full_seal(path: Path, view: SealedConfig, **changes) -> Path:
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps({"version": 1, "launch": launch_document(view, **changes)}), encoding="utf-8")
     return path
+
+
+def make_test_part(launch: dict, **changes) -> dict:
+    """A test part of the seal whose criteria are rebuilt from its metrics, as ``evaluation.criteria_from_seal`` does: the figures of ``tests.fixtures.figures``."""
+    from invoiceflow.evaluation import criteria_of
+    from tests.fixtures.figures import LIMITS, figures
+
+    metrics = figures()
+    base = {"run_key": "run-close", "as_of": "2026-10-29 00:00:00", "config_sha256": launch["config_sha256"],
+            "criteria": [c.seal_entry() for c in criteria_of(metrics, LIMITS)], "metrics": metrics,
+            "cord": {"chosen_epoch": launch["chosen_epoch"], "receipts": 100}, "baselines": {"b0": {"auto_post": 0}, "b1": {"auto_post": 300}}, "operation": {"days": 20, "invoices": 600}}
+    return {**base, **changes}

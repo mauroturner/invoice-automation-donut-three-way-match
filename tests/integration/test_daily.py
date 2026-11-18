@@ -270,3 +270,26 @@ def test_a_day_whose_row_is_written_is_not_completed_later_with_other_invoices(w
     with pytest.raises(daily.ScoringError, match="ya tiene su fila"):
         daily.run_day(conn, client, world.extractor, run, world.view, spec, inbox, invoice_keys=keys)
     assert snapshot(conn) == before and conn.execute("SELECT invoices FROM daily_ops").fetchone() == (2,)
+
+
+def test_what_is_posted_is_what_erp_post_as_says_and_the_client_refuses_anything_but_a_draft(world, tmp_path, monkeypatch):
+    """``[erp] post_as`` is read here (it was validated and fingerprinted and read by nobody, the lesson B2 of project 06): the status of the document comes from it."""
+    read_the_printed_qr(monkeypatch, world)
+    client, _ = fresh_erp(world, tmp_path)
+    conn = open_warehouse(tmp_path)
+    spec, keys = world.specs()[world.days[0]], [t.invoice_key for t in world.truths[world.days[0]]]
+    sent: list[int] = []
+    real = client.post_invoice
+    client.post_invoice = lambda document: (sent.append(document["docstatus"]), real(document))[1]
+    run, inbox = load_files(world, conn, spec, keys, tmp_path)
+    assert daily.DOCSTATUS == {"draft": 0}
+    daily.run_day(conn, client, world.extractor, run, world.view, spec, inbox)
+    assert sent and set(sent) == {0}
+    other = tmp_path / "other"
+    client2, _ = fresh_erp(world, other)
+    conn2 = open_warehouse(other)
+    run2, inbox2 = load_files(world, conn2, spec, keys, other)
+    monkeypatch.setitem(daily.DOCSTATUS, "draft", 1)
+    result = daily.run_day(conn2, client2, world.extractor, run2, world.view, spec, inbox2)
+    assert result.posted == 0 and result.post_failed == result.auto_post > 0, "a document that is not a draft is refused by the client, and the invoice is post_failed"
+    assert client2._list("Purchase Invoice", [], ["name"]) == []

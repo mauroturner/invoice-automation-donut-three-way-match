@@ -1,0 +1,98 @@
+"""The Spanish texts of the criteria and the way numbers are written in them (RF20; AC22; plan sections 16 and 21; decision D19): the names, the thresholds and the verdicts of C01-C10.
+
+Each verdict is built from the figures it tells and **names its own comparison** (the checkpoint, a design the model did not see, B1, the read-back of the ERP); a figure that comes from the synthetic
+invoices says so in the sentence. A criterion that cannot be computed says why and is never passed (``cannot``).
+"""
+
+from __future__ import annotations
+
+import math
+from typing import NamedTuple
+
+
+class CriterionText(NamedTuple):
+    name_es: str
+    threshold_es: str          # with the limits of ``[criteria]`` in {braces}
+    seen_by_research: str
+    seen_by_planner: str
+    synthetic: bool            # its figure comes from the synthetic invoices
+
+
+# id: name, threshold, what the research saw, what the planner saw (requirements.md, 8.1; D19)
+CRITERIA: dict[str, CriterionText] = {
+    "C01": CriterionText("El ajuste no olvida CORD", "límite inferior del intervalo del 95 % de TED(elegido) − TED(checkpoint) en la prueba de CORD > {c01} puntos", "sí", "sí", False),
+    "C02": CriterionText("Lee bien las líneas de proveedores conocidos", "tasa de líneas exactas en test_known ≥ {c02}", "no", "no", True),
+    "C03": CriterionText("Lee bien las líneas de un diseño nuevo", "tasa de líneas exactas en test_new ≥ {c03}", "no", "no", True),
+    "C04": CriterionText("Lee el QR", "de las facturas impresas con QR intacto, la parte con el texto exacto ≥ {c04}", "sí", "sí", True),
+    "C05": CriterionText("No carga mal", "límite superior del intervalo de Wilson de la tasa de carga mala, en toda la prueba, ≤ {c05}", "no", "no", True),
+    "C06": CriterionText("Se carga sola la mayoría de las facturas de proveedores conocidos", "paso directo en test_known ≥ {c06}", "no", "no", True),
+    "C07": CriterionText("Manda a revisión lo que no cierra", "de las facturas con discrepancia sembrada, la parte con revisión ≥ {c07}", "no", "no", True),
+    "C08": CriterionText("El cruce de tres vías evita cargas malas", "límite inferior del intervalo del 95 % de (tasa de carga mala de B1 − la del flujo) > 0", "no", "no", True),
+    "C09": CriterionText("Lo cargado es lo decidido", "el 100 % de los borradores leídos de vuelta del ERP coincide campo por campo, y repetir un día no crea ninguna factura nueva", "no", "no", True),
+    "C10": CriterionText("Variantes y seguimiento (informativo)", "sin umbral: que esté escrito y sea consistente", "en parte", "en parte", True),
+}
+_LIMIT_KEYS = {"c01": "c01_min_ted_diff", "c02": "c02_min_line_exact", "c03": "c03_min_line_exact", "c04": "c04_min_qr_read", "c05": "c05_max_bad_post_upper",
+               "c06": "c06_min_straight_through", "c07": "c07_min_review_recall"}
+LINES_OF = {"known": "de proveedores conocidos", "new": "de proveedores con un diseño nuevo"}
+
+
+def es(value: float | None, decimals: int = 3, *, percent: bool = False) -> str:
+    """A number as the Spanish text shows it: a comma for the decimals, a point for the thousands and «−» for the minus sign; «sin dato» if there is none. With `percent` the number is a
+    fraction written as « x %». A number that rounds to zero never carries a minus sign."""
+    if value is None or (isinstance(value, float) and not math.isfinite(value)):
+        return "sin dato"
+    text = f"{(value * 100 if percent else value):,.{decimals}f}"
+    if text.startswith("-") and not any(ch in "123456789" for ch in text):
+        text = text[1:]
+    text = text.replace(",", "§").replace(".", ",").replace("§", ".").replace("-", "−")
+    return f"{text} %" if percent else text
+
+
+def pct(value: float | None) -> str:
+    """A fraction as a percentage with the decimals it needs (none when whole, one otherwise, two under 1 %)."""
+    if value is None:
+        return "sin dato"
+    scaled = value * 100
+    if abs(scaled - round(scaled)) < 1e-9:
+        return es(value, 0, percent=True)
+    return es(value, 2 if abs(scaled) < 1 else 1, percent=True)
+
+
+def thresholds_from(limits: dict[str, float]) -> dict[str, str]:
+    """The threshold of each criterion with its limits from ``[criteria]`` written in."""
+    numbers = {key: (es(limits[name], 1) if key == "c01" else pct(limits[name])) for key, name in _LIMIT_KEYS.items()}
+    return {cid: text.threshold_es.format(**numbers) for cid, text in CRITERIA.items()}
+
+
+def cannot(why: str) -> str:
+    return f"El criterio no se puede calcular: {why}."
+
+
+def informative_verdict(variants: int, days: int) -> str:
+    return f"Informativo: sin umbral. Las líneas base, el recuerdo por clase sembrada, la lectura por campo, perfil y tamaño del QR y los {days} días de operación están en el resumen ({variants} variantes)."
+
+
+def verdict(cid: str, passed: bool, **f: object) -> str:
+    """The sentence of criterion `cid`, from its figures (see ``evaluation.criteria_of``)."""
+    mark = "" if passed else " No se cumple."
+    if cid == "C01":
+        return (f"En la prueba de CORD ({f['receipts']} recibos), el modelo elegido tiene TED {es(f['chosen'], 1)} y el checkpoint sin ajustar {es(f['checkpoint'], 1)}: la diferencia es {es(f['value'], 1)} "
+                f"(intervalo del 95 %, {es(f['low'], 1)} a {es(f['high'], 1)}); el límite inferior debía quedar por encima de {es(f['limit'], 1)} puntos.{mark}")
+    if cid in ("C02", "C03"):
+        return f"Sobre {f['invoices']} facturas sintéticas {LINES_OF[str(f['cohort'])]}, el {pct(f['rate'])} de las líneas se leyó exacto; el umbral era {pct(f['limit'])}.{mark}"
+    if cid == "C04":
+        return f"Entre las {f['printed']} facturas sintéticas impresas con QR intacto, el lector leyó el texto exacto de {f['read']}: {pct(f['rate'])}; el umbral era {pct(f['limit'])}.{mark}"
+    if cid == "C05":
+        return (f"Sobre {f['invoices']} facturas sintéticas, {f['bad']} de {f['posts']} cargas automáticas fue mala; el límite superior del intervalo de Wilson es {pct(f['high'])} "
+                f"y el máximo era {pct(f['limit'])}.{mark}")
+    if cid == "C06":
+        return f"Sobre las facturas sintéticas limpias de proveedores conocidos, el {pct(f['rate'])} ({f['posted']} de {f['clean']}) se cargó solo y bien; el umbral era {pct(f['limit'])}.{mark}"
+    if cid == "C07":
+        return f"De las {f['planted']} facturas sintéticas con una discrepancia sembrada, {f['review']} de {f['planted']} fueron a revisión ({pct(f['rate'])}); el umbral era {pct(f['limit'])}.{mark}"
+    if cid == "C08":
+        return (f"Sobre las facturas sintéticas de la prueba, B1 (solo el QR en dos vías) cargó mal el {es(f['b1'], 1, percent=True)} y el flujo el {es(f['flow'], 1, percent=True)}; la diferencia es {es(f['value'] * 100, 1)} puntos "
+                f"(intervalo del 95 %, {es(f['low'] * 100, 1)} a {es(f['high'] * 100, 1)}); el límite inferior debía ser mayor que 0.{mark}")
+    if cid == "C09":
+        return (f"{f['equal']} de {f['posts']} cargas automáticas se leyeron de vuelta del ERP iguales a lo decidido (sintético) y repetir el último día creó {f['repeat']} facturas nuevas; "
+                f"debían coincidir todas y no crearse ninguna.{mark}")
+    raise KeyError(cid)

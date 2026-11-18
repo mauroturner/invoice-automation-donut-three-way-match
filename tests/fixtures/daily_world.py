@@ -41,7 +41,8 @@ class DailyWorld:
 
     def read_qr(self, image, view):
         """The QR of a page as the generator printed it (the pages of the quick configuration are drawn at 50 dpi, where no reader can see a QR: reading it is ``tests/unit/test_qr.py``'s)."""
-        return dataclasses.replace(self.qr_by_page[page_key(image)], reader="pyzbar")
+        read = self.qr_by_page[page_key(image)]
+        return dataclasses.replace(read, reader="pyzbar") if read.status == "ok" else read
 
     def specs(self) -> dict[date, DeliverySpec]:
         return {spec.day: spec for spec in delivery_plan(self.view) if spec.kind == "daily"}

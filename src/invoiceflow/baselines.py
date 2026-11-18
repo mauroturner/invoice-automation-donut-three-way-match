@@ -14,7 +14,7 @@
 from __future__ import annotations
 
 from collections import defaultdict
-from collections.abc import Iterable, Mapping
+from collections.abc import Iterable, Mapping, Callable
 from decimal import ROUND_HALF_UP, Decimal
 from typing import Any
 
@@ -130,9 +130,10 @@ def _arrival(truth: InvoiceTruth) -> tuple:
     return truth.received_on, SPLITS.index(truth.split), int(truth.invoice_key.rsplit("-", 1)[1])
 
 
-def oracle(view: SealedConfig, master: Master, truths: Iterable[InvoiceTruth]) -> dict[str, Decision]:
-    """B3: the decision of every invoice in `truths` (key -> ``Decision``) from its true fields, its true QR and an ERP view made from `master` for the day it reached accounts payable.
-    The invoices are processed in the order they arrived (``received_on``, partition, ordinal), so what an earlier one posted (the quantity invoiced, the voucher) is what a later one finds."""
+def replay(view: SealedConfig, master: Master, truths: Iterable[InvoiceTruth], decide_one: Callable[[InvoiceTruth, ErpView], Decision]) -> dict[str, Decision]:
+    """The decision of every invoice in `truths` (key -> ``Decision``) given by ``decide_one(truth, erp_view)`` over an ERP view made from `master` for the day it reached accounts payable. The
+    invoices are processed in the order they arrived (``received_on``, partition, ordinal), so what an earlier one posted (the quantity invoiced, the voucher) is what a later one finds: each
+    baseline has its own world, in which only what it posted counts."""
     orders, receipts = _orders(master), _receipts(master)
     supplier_by_cuit = {supplier.cuit: supplier.supplier_key for supplier in master.suppliers}
     invoiced: dict[str, dict[str, Decimal]] = defaultdict(lambda: defaultdict(Decimal))
@@ -145,7 +146,7 @@ def oracle(view: SealedConfig, master: Master, truths: Iterable[InvoiceTruth]) -
         day = truth.received_on
         erp = ErpView(po=po, receipts_until_day=tuple(r for r in receipts.get(cited, ()) if r.date <= day) if po else (), invoiced_before=dict(invoiced[cited]) if po else {},
                       known_fiscal_keys=known, supplier_by_cuit=supplier_by_cuit, day=day)
-        decision = decide(fields, qr, erp, view)
+        decision = decide_one(truth, erp)
         decisions[truth.invoice_key] = decision
         payload = qr.payload
         key = (payload.cuit, payload.pto_vta, payload.tipo_cmp, payload.nro_cmp) if payload else (fields.cuit_emisor, fields.pto_vta, fields.tipo, fields.nro)
@@ -154,3 +155,8 @@ def oracle(view: SealedConfig, master: Master, truths: Iterable[InvoiceTruth]) -
             for line in truth.lines:
                 invoiced[cited][line.code] += line.qty
     return decisions
+
+
+def oracle(view: SealedConfig, master: Master, truths: Iterable[InvoiceTruth]) -> dict[str, Decision]:
+    """B3: the decision of every invoice in `truths` (key -> ``Decision``) from its true fields, its true QR and an ERP view made from `master` for the day it reached accounts payable (``replay``)."""
+    return replay(view, master, truths, lambda truth, erp: decide(truth_fields(truth), truth_qr(truth, view), erp, view))

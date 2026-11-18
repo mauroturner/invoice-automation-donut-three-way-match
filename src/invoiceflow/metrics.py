@@ -129,3 +129,38 @@ def exact_lines(fields: InvoiceFields, lines: Sequence[Any]) -> tuple[int, int]:
             pool[key] -= 1
             exact += 1
     return exact, len(lines)
+
+
+# --- the intervals of the closing evaluation (D20) --------------------------------------------------------------------------------------
+
+
+def wilson(successes: int, n: int, z: float = 1.96) -> tuple[float | None, float | None]:
+    """The Wilson score interval of a proportion (95 % for the default `z`), within 0 and 1; ``(None, None)`` when there is nothing to count. It behaves near 0 and near 1, where the normal
+    interval does not: 0 bad posts in 300 have an upper limit of 1.26 %."""
+    if n == 0:
+        return None, None
+    if not 0 <= successes <= n:
+        raise ValueError(f"wilson: {successes} aciertos de {n} no es una proporción")
+    p = successes / n
+    denominator = 1 + z * z / n
+    centre = (p + z * z / (2 * n)) / denominator
+    half = z * ((p * (1 - p) / n + z * z / (4 * n * n)) ** 0.5) / denominator
+    return (0.0 if successes == 0 else max(0.0, centre - half)), (1.0 if successes == n else min(1.0, centre + half))
+
+
+def paired_difference(a: Sequence[float], b: Sequence[float], *, resamples: int, seed: int) -> tuple[float | None, float | None, float | None]:
+    """``(mean(a - b), low, high)``: the mean difference over the pairs and the 95 % interval of resampling the pairs (the same unit for `a` and `b`) `resamples` times with the seed `seed`.
+    ``(None, None, None)`` with no pairs; with no difference at all the interval is that point."""
+    import numpy as np
+
+    if len(a) != len(b):
+        raise ValueError(f"paired_difference: hay {len(a)} valores de un lado y {len(b)} del otro; se esperaban pares")
+    if not a:
+        return None, None, None
+    differences = np.asarray(a, dtype=float) - np.asarray(b, dtype=float)
+    value = float(differences.mean())
+    if not differences.any():
+        return value, value, value
+    draws = np.random.default_rng(seed).integers(0, len(differences), size=(resamples, len(differences)))
+    means = differences[draws].mean(axis=1)
+    return value, float(np.percentile(means, 2.5)), float(np.percentile(means, 97.5))

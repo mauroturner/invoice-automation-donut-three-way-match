@@ -46,6 +46,7 @@ HEADER_FIELDS = ("tipo", "pto_vta", "nro", "fecha", "cuit_emisor", "razon_social
 LINE_FIELDS = (("code", "codigo", "codigo"), ("desc", "descripcion", "descripcion"), ("qty", "cantidad", "cantidad"), ("unit", "unidad", "unidad"),
                ("unit_price", "precio_unitario", "precio_unitario"), ("amount", "importe", "importe"))
 TOTAL_FIELDS = ("neto", "iva_21", "iva_105", "total")
+DOCSTATUS = {"draft": 0}       # what ``[erp] post_as`` says to write; the client refuses any other status (D17)
 
 
 class ScoringError(RuntimeError):
@@ -184,7 +185,7 @@ def run_day(conn: sqlite3.Connection, client: Any, extractor: Any, run: RunMeta,
             qr_values = qr_row(key, qr, qr_seconds)
             if decision.decision == "auto_post":
                 posted = time.perf_counter()
-                document = invoice_doc(fields, qr.payload, erp, erp.supplier_by_cuit[qr.payload.cuit])
+                document = {**invoice_doc(fields, qr.payload, erp, erp.supplier_by_cuit[qr.payload.cuit]), "docstatus": DOCSTATUS[view.erp.post_as]}
                 post = client.post_invoice(document)
                 post_seconds = time.perf_counter() - posted
         total = time.perf_counter() - started

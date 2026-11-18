@@ -84,3 +84,31 @@ def test_the_module_reads_no_float_into_an_amount():
     source = inspect.getsource(metrics.parse_money)
     assert "float(" not in source
 
+
+# --- the intervals (U16; D20) ----------------------------------------------------------------------------------------------------------
+
+
+def test_the_wilson_interval_is_the_one_of_the_decision_and_is_never_outside_zero_to_one():
+    """D20: with 0 bad posts of 300 the upper limit is 1,26 %; 1 of 2 is the textbook 0.0945 to 0.9055; 0 of 0 has no interval."""
+    low, high = metrics.wilson(0, 300)
+    assert low == 0.0 and round(high * 100, 2) == 1.26
+    low, high = metrics.wilson(1, 2)
+    assert (round(low, 4), round(high, 4)) == (0.0945, 0.9055)
+    low, high = metrics.wilson(300, 300)
+    assert high == 1.0 and round(low * 100, 2) == 98.74
+    assert metrics.wilson(0, 0) == (None, None)
+    for bad in ((-1, 5), (6, 5)):
+        with pytest.raises(ValueError):
+            metrics.wilson(*bad)
+
+
+def test_the_paired_resample_is_seeded_pairs_the_units_and_reports_the_mean_difference():
+    a, b = [(i * 7 % 11) / 11 + 0.3 for i in range(40)], [(i * 5 % 13) / 13 for i in range(40)]
+    first = metrics.paired_difference(a, b, resamples=500, seed=0)
+    assert first == metrics.paired_difference(a, b, resamples=500, seed=0) and first != metrics.paired_difference(a, b, resamples=500, seed=1)
+    value, low, high = first
+    assert value == pytest.approx(sum(a) / 40 - sum(b) / 40) and 0 < low < value < high, "a difference of about 0.3 that the pairs support"
+    assert metrics.paired_difference([1.0] * 4, [1.0] * 4, resamples=50, seed=0) == (0.0, 0.0, 0.0), "no difference, no interval"
+    assert metrics.paired_difference([], [], resamples=50, seed=0) == (None, None, None)
+    with pytest.raises(ValueError, match="pares"):
+        metrics.paired_difference([1.0], [1.0, 2.0], resamples=5, seed=0)
