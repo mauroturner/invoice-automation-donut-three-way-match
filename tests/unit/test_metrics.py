@@ -44,6 +44,17 @@ def test_the_ted_accuracy_is_one_minus_the_edit_distance_over_the_distance_from_
     assert ted_accuracy({"anything": "1"}, {}) == 1.0, "nothing to read, nothing to lose: the research's rule for an empty ground truth"
 
 
+def test_the_order_of_the_keys_of_an_object_is_not_part_of_the_tree_but_the_order_of_a_list_is():
+    """U22, the first real run: the canonical target of a receipt has its keys sorted and the model writes them in the order it learned, so a reading that was word for word the truth scored
+    0.45 against it. A key of an object has no position: the same keys in another order are the same tree; the items of a list do have one (``menu`` lines), and nothing else changes."""
+    truth = {"menu": [{"cnt": "1", "nm": "A", "price": "10"}, {"cnt": "2", "nm": "B", "price": "20"}], "total": {"cashprice": "50", "changeprice": "20", "total_price": "30"}}
+    reordered = {"total": {"total_price": "30", "cashprice": "50", "changeprice": "20"}, "menu": [{"nm": "A", "cnt": "1", "price": "10"}, {"price": "20", "nm": "B", "cnt": "2"}]}
+    assert ted_accuracy(reordered, truth) == 1.0 and ted_accuracy(truth, reordered) == 1.0
+    wrong = {"total": {"total_price": "31", "cashprice": "50", "changeprice": "20"}, "menu": reordered["menu"]}
+    assert ted_accuracy(wrong, truth) == ted_accuracy({**truth, "total": {**truth["total"], "total_price": "31"}}, truth) < 1.0, "a wrong leaf costs the same whatever the order of its siblings"
+    assert ted_accuracy({"menu": list(reversed(reordered["menu"])), "total": reordered["total"]}, truth) < 1.0, "the order of the lines is still part of the tree"
+
+
 def test_the_leaves_are_listed_with_their_path_and_the_leaf_recall_counts_repeats_once_each():
     assert leaves({"menu": [{"nm": "A", "cnt": "1"}, {"nm": "B", "cnt": "2"}], "total": {"total_price": "Rp 3.000"}}) == [
         ("menu[].nm", "a"), ("menu[].cnt", "1.00"), ("menu[].nm", "b"), ("menu[].cnt", "2.00"), ("total.total_price", "3000.00")]

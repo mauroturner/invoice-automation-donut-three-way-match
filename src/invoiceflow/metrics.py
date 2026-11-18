@@ -1,7 +1,8 @@
 """The measures of the document model (RF16, AC18, AC22 in part; plan sections 9.3 and 16; decision D12): what the launch chooses an epoch with and what the closing evaluation reports.
 
-* ``ted_accuracy`` is the research's (``research/s02``): ``1 - TED(prediction, truth) / TED(nothing, truth)`` over ordered trees (a dict's keys are nodes, a list's items are nodes
-  called ``item``, a scalar is a leaf holding its normal form), with the tree edit distance of ``zss``. It is a reimplementation, not the authors' script.
+* ``ted_accuracy`` is the research's (``research/s02``): ``1 - TED(prediction, truth) / TED(nothing, truth)`` over ordered trees (a dict's keys are nodes, **taken in sorted order: the order of the keys of an
+  object is not a fact of the receipt, and the canonical target and the model write them in different ones (U22)**; a list's items are nodes
+  called ``item``, in their order, a scalar is a leaf holding its normal form), with the tree edit distance of ``zss``. It is a reimplementation, not the authors' script.
 * ``parse_money`` and ``normalise`` read CORD's annotated amounts in the formats they come in (``60.000``, ``Rp 16.500``, ``1,591,600``, ``226,500.00``, ``2.00``) as ``Decimal``: no
   ``float`` is made, and a leaf compares by its normal form (an amount to cents, a text in lower case with its whitespace collapsed).
 * ``leaf_match`` is the recall of the leaves, by path, with repeated leaves counted once each.
@@ -70,7 +71,7 @@ def normalise(value: Any) -> str:
 def _tree(value: Any, label: str = "root") -> Node:
     node = Node(label)
     if isinstance(value, dict):
-        for key, item in value.items():
+        for key, item in sorted(value.items(), key=lambda pair: str(pair[0])):      # the keys of an object have no order; the items of a list do
             node.addkid(_tree(item, str(key)))
     elif isinstance(value, list):
         for item in value:

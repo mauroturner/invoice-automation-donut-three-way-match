@@ -7,6 +7,7 @@ from __future__ import annotations
 import dataclasses
 import json
 import math
+from types import SimpleNamespace
 
 import pytest
 
@@ -51,6 +52,14 @@ def test_no_valid_candidate_stops_the_launch_with_model_choice_error(view):
         choose(candidates_of(hc.NONE_VALID_CANDIDATES), hc.CHECKPOINT_TED, view)
     with pytest.raises(ModelChoiceError):
         choose([], hc.CHECKPOINT_TED, view)
+
+
+def test_the_error_of_a_launch_with_no_valid_candidate_says_what_each_epoch_scored_on_cord():
+    """U22: the first real launch ended here after more than an hour of fine-tune and said only the floor; the figures of the epochs went with the work folder. The message carries them."""
+    view = SimpleNamespace(model=SimpleNamespace(cord_val_tolerance=2.0))
+    with pytest.raises(ModelChoiceError) as error:
+        choose(candidates_of(hc.NONE_VALID_CANDIDATES), hc.CHECKPOINT_TED, view)
+    assert "época 2: 91.0" in str(error.value) and "época 4: 90.5" in str(error.value)
 
 
 def test_the_floor_is_the_checkpoint_minus_the_tolerance_and_its_border_is_inside(view):

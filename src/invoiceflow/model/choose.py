@@ -95,7 +95,7 @@ def choose(candidates: Iterable[Candidate], checkpoint_ted: float, view: SealedC
     dropped = tuple(c.epoch for c in ordered if _d(c.cord_ted) < floor)
     if not kept:
         raise ModelChoiceError(f"ninguna época candidata conserva CORD: todas están por debajo de {floor} (el TED del checkpoint, {checkpoint_ted}, menos {tolerance}); "
-                               f"épocas: {[c.epoch for c in ordered] or 'ninguna'} (runbook R5)")
+                               f"TED en CORD por época: {'; '.join(f'época {c.epoch}: {c.cord_ted}' for c in ordered) or 'ninguna época'} (runbook R5)")
     best = max(_d(c.exact_known) + _d(c.exact_new) for c in kept) / 2
     winner = next(c for c in kept if best - (_d(c.exact_known) + _d(c.exact_new)) / 2 <= TIE)   # kept is in epoch order: the earliest of the tied
     return Choice(winner.epoch, _score(winner), float(floor), checkpoint_ted, tolerance, tuple(c.epoch for c in kept), dropped, tuple(ordered))
