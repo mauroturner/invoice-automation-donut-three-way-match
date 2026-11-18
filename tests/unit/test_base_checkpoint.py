@@ -70,3 +70,19 @@ def test_what_the_pinned_revision_ships(pinned, view):
     print("\njson files of the pinned revision:", pinned["files"], "| pytorch_model.bin cached:", bool(binary), "| model.safetensors cached at the pinned revision:", isinstance(safe, str))
     assert isinstance(binary, str), "load_base needs the .bin of the pinned revision in the cache"
     assert not isinstance(safe, str), "the pinned revision shipped a model.safetensors after all: D47 and load_base's fallback can be simplified"
+
+
+def test_the_pinned_bin_loads_once_with_weights_only_and_is_the_model_the_fine_tune_assumes(view):
+    """The one real read of ``pytorch_model.bin`` (U14; D47): ``load_base`` asks for ``safetensors`` first, finds none at the pinned revision and reads the ``.bin`` with
+    ``weights_only=True``, which refuses anything but tensors. What it returns is a Donut with the vocabulary and the input size the launch assumes."""
+    import time
+
+    from invoiceflow.model.train import load_base
+
+    start = time.perf_counter()
+    processor, model = load_base(view)
+    seconds = time.perf_counter() - start
+    parameters = sum(p.numel() for p in model.parameters())
+    print(f"\nload_base: {seconds:.1f} s, {parameters:,} parameters, decoder rows {model.decoder.get_input_embeddings().weight.shape[0]}, tokenizer {len(processor.tokenizer)}")
+    assert len(processor.tokenizer) == model.decoder.get_input_embeddings().weight.shape[0] == 57580
+    assert list(model.config.encoder.image_size) == [1280, 960] and 150_000_000 < parameters < 300_000_000
