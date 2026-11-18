@@ -1,0 +1,7 @@
+# Development and test dependencies (decisions D32 and D35). pytest-xdist is not pinned (decision D32). httpx, the client of FastAPI's test client,
+# is pinned in requirements.txt: the ERP client imports it at run time.
+-r requirements-ml.txt
+pytest==9.2.0
+# transitive
+iniconfig==2.3.1
+pluggy==1.7.0

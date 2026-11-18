@@ -1,0 +1,13 @@
+# Generated state of the pipeline; never versioned
+data/raw/
+data/interim/
+data/warehouse/
+data/models/
+data/erp/
+data/quick/
+docker/.env
+reports/validation/history/
+.venv/
+__pycache__/
+.pytest_cache/
+*.egg-info/

@@ -1,0 +1,29 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "invoiceflow"
+version = "0.1.0"
+description = "Supplier invoices that load themselves into the ERP: a document model reads them, the ARCA QR anchors them, a two- and three-way match decides, on CORD and synthetic Argentine invoices."
+# 3.11 on the developer machine (Windows); the service image of U21 stays inside the same range (decision D35).
+requires-python = ">=3.11,<3.14"
+# Runtime, model and development dependencies are pinned in requirements.txt, requirements-ml.txt and requirements-dev.txt (decision D35).
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+minversion = "8.0"
+testpaths = ["tests"]
+# "src" makes the package importable without installing it; "." makes tests.fixtures importable.
+pythonpath = ["src", "."]
+addopts = "-ra --strict-markers --import-mode=importlib --durations=10 -m 'not real_data and not model and not gpu and not docker and not erpnext'"
+markers = [
+    "real_data: needs the real CORD Parquet files in data/raw/ (not selected by default)",
+    "model: needs the pinned Donut checkpoint in the Hugging Face cache (not selected by default)",
+    "gpu: needs CUDA (not selected by default)",
+    "docker: needs Docker (not selected by default)",
+    "erpnext: needs the ERPNext v15 stack in Docker, heavy and run once (not selected by default)",
+    "slow: one of the tests the plan names as slow (section 24.1); informative, it is not excluded",
+]

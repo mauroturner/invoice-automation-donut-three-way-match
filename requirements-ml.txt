@@ -1,0 +1,37 @@
+# The model's dependencies on top of requirements.txt (decision D35): PyTorch, Donut (Hugging Face) and the tree edit distance of the metric (zss).
+# torch is not asked of PyPI: its Windows wheel there is CPU-only. Install it first, from the PyTorch index, and pip then finds the pin satisfied
+# (the CUDA wheel is 2.14.1+cu130, and ==2.14.1 matches its public version; `pip install --dry-run -r requirements-dev.txt` replaces nothing):
+#   Windows with the RTX 3090: python -m pip install torch==2.14.1 --index-url https://download.pytorch.org/whl/cu130
+#   the Docker image (no GPU): python -m pip install torch==2.14.1 --index-url https://download.pytorch.org/whl/cpu
+# The versions are those of requirements-research.txt. python -m pip install -r requirements-ml.txt installs requirements.txt too.
+-r requirements.txt
+torch==2.14.1
+transformers==5.22.1
+tokenizers==0.23.3
+sentencepiece==0.2.2
+huggingface-hub==2.4.0
+safetensors==0.8.0
+zss==1.2.0
+# transitive
+filelock==4.2.4
+fsspec==2026.9.0
+hf-xet==1.8.0
+httpcore2==2.16.0
+httpx2==2.16.0
+jinja2==3.1.6
+markdown-it-py==4.2.0
+markupsafe==3.0.3
+mdurl==0.1.2
+mpmath==1.3.0
+networkx==3.6.1
+pygments==2.21.0
+pyyaml==6.0.3
+regex==2026.9.29
+rich==15.0.0
+setuptools==78.1.0
+shellingham==1.5.4
+six==1.17.0
+sympy==1.14.0
+tqdm==4.70.1
+truststore==0.10.5
+typer==0.27.3
