@@ -2,7 +2,7 @@
 
 ``DonutExtractor`` takes a model and a processor (any objects with the interface of Hugging Face's ``VisionEncoderDecoderModel`` and ``DonutProcessor``), the task token, ``max_length`` and
 the device, so the default test session runs it on fakes with no torch and no checkpoint. ``load_donut`` is the only place that imports torch and transformers and builds the real ones from a
-folder of ``safetensors`` (the artifact of the launch, U10's ``load_artifact`` will check its hashes first: nothing here reads a file that was not checked). ``parse_generation`` turns the
+folder of ``safetensors`` (the artifact of the launch: ``artifact.load_artifact`` checks its hashes first, so nothing here reads a file that was not checked). ``parse_generation`` turns the
 generated sequence into the tree: it cuts the prompt of the task and the end and padding tokens off and reads what is left with ``token2json``; what cannot be read is ``{}``.
 """
 
@@ -69,12 +69,12 @@ class DonutExtractor:
 def load_donut(view: SealedConfig, registry_row: Mapping[str, Any], models_dir: Path) -> DonutExtractor:
     """The real extractor from the folder `models_dir`/`registry_row["artifact_name"]` (``safetensors`` only, no network): the page is resized to ``[model] input_size``."""
     import torch
-    from transformers import DonutProcessor, VisionEncoderDecoderModel
+
+    from invoiceflow.model.artifact import load_artifact
 
     folder = Path(models_dir) / str(registry_row["artifact_name"])
     device = resolve_device(view.model.infer_device, torch.cuda.is_available())
-    model = VisionEncoderDecoderModel.from_pretrained(folder, use_safetensors=True, local_files_only=True)
-    processor = DonutProcessor.from_pretrained(folder, local_files_only=True)
+    processor, model = load_artifact(folder, registry_row.get("artifact_sha256"))   # the hashes are checked before a weight is read (D13, AC19)
     height, width = view.model.input_size
     processor.image_processor.size = {"height": height, "width": width}
     model.eval().to(device)

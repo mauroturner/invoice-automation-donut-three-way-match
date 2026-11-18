@@ -457,7 +457,7 @@ def tiny_model(vocab: list[str], view) -> tuple[processor, model]               
 - **Datos**: en cada época, los 800 recibos de CORD `train` con `<s_cord-v2>` y las 2.000 facturas sintéticas `train` con `<s_factura_ar>`, mezclados con `seed` (D09: el repaso de CORD evita el olvido que mide C01).
 - **Optimización**: AdamW con `learning_rate`, calentamiento lineal de `warmup_steps` y decaimiento lineal hasta 0; lote `batch_size` con `grad_accumulation`; bf16 con `torch.autocast` (`p03`: 0,162 s por paso y 7,43 GB); recorte del gradiente a 1,0; semillas de Python, NumPy y torch. Ninguna parada temprana: las épocas candidatas se guardan y se eligen en validación.
 - **Sin CUDA** el ajuste real sale con `RunRefusedError` (salida 2, runbook R5); el modo rápido ajusta el modelo diminuto en CPU (D11).
-- **El modelo diminuto** (`tiny_model`): un `VisionEncoderDecoderModel` con un codificador `DonutSwinConfig` de 2 etapas, `embed_dim` 16 y ventana 4, y un decodificador `MBartConfig` de 1 capa y `d_model` 32, con un tokenizador `WordLevel` armado en memoria con `tokenizers` **[Verificar en U10 que transformers 5.22.1 arma los dos sin descargar nada]**.
+- **El modelo diminuto** (`tiny_model`): un `VisionEncoderDecoderModel` con un codificador `DonutSwinConfig` de 2 etapas, `embed_dim` 16 y ventana 4, y un decodificador `MBartConfig` de 1 capa y `d_model` 32, con un tokenizador `WordLevel` armado en memoria con `tokenizers`. **Verificado el 2026-11-18 (U10)**: transformers 5.22.1 arma los dos sin descargar nada ni abrir un socket (decenas de miles de parámetros; D47).
 
 ### 9.3 Elección (`model/choose.py`; D12)
 
@@ -465,7 +465,7 @@ Para cada época candidata: TED y recuerdo de hojas en CORD `validation` (100), 
 
 ### 9.4 Artefacto (`model/artifact.py`; D13)
 
-La época elegida se guarda con `save_pretrained(..., safe_serialization=True)` (`model.safetensors`, `config.json`, `generation_config.json`) y el tokenizador como `tokenizer.json`; se registran el SHA-256 de cada archivo y uno del conjunto. `load_artifact` comprueba tamaño y huella de cada archivo **antes** de leerlo, carga con `use_safetensors=True` y se niega si en la carpeta hay `.bin`, `.pt`, `.pth`, `.pkl` o `.ckpt`.
+La época elegida se guarda con `save_pretrained(..., safe_serialization=True)` (`model.safetensors`, `config.json`, `generation_config.json`) y el tokenizador como `tokenizer.json`; se registran el SHA-256 de cada archivo y uno del conjunto. `load_artifact` comprueba tamaño y huella de cada archivo **antes** de leerlo, carga con `use_safetensors=True` y se niega si en la carpeta hay `.bin`, `.pt`, `.pth`, `.pkl` o `.ckpt`. **Nota del 2026-11-18 (U10)**: la carpeta lleva además el procesador y un manifiesto `artifact.json` con el tamaño y la huella de cada archivo; `artifact_sha256` es la huella del manifiesto (D47); la revisión fijada del checkpoint solo trae `pytorch_model.bin`, que `train.load_base` lee una vez con `weights_only=True`.
 
 ### 9.5 Lectura y normalización (`model/extractors.py`, `model/donut.py`, `normalize.py`)
 

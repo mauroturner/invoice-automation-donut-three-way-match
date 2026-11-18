@@ -124,3 +124,19 @@ def quick_master(quick_view):
     from invoiceflow.synth.master import master
 
     return master(quick_view)
+
+
+@pytest.fixture(scope="session")
+def tiny_truths(quick_view, quick_master, tmp_path_factory):
+    """The eight invoices of ``validation_known`` of the quick configuration, made once: what the tiny model is trained and read on."""
+    from invoiceflow.synth.invoices import invoices
+
+    return invoices(quick_view, quick_master, "validation_known", None, seal_path=tmp_path_factory.mktemp("seal") / "none.json")
+
+
+@pytest.fixture
+def tiny_kit(quick_view, tiny_truths):
+    """A fresh tiny processor, model and training items (``tests/fixtures/tiny_kit.py``): 8 synthetic invoices and 4 CORD-like receipts. Torch is imported here, once per session."""
+    from tests.fixtures.tiny_kit import make_kit
+
+    return make_kit(quick_view, tiny_truths, extra_cord=4)
