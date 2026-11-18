@@ -8,6 +8,7 @@ cord_dir = "data/quick/cord"
 arca_spec_path = "data/quick/arca/QRespecificaciones.pdf"
 arca_spec_bytes = 0
 arca_spec_sha256 = ""
+expected_rows = { train = 16, validation = 4, test = 4 }       # the tiny CORD: 16, 4 and 4 receipts
 
 [[source.cord_files]]                      # replaces the list of the six real shards: the tiny CORD has one file per split
 split = "train"

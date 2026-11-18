@@ -74,6 +74,7 @@ def test_default_configuration_has_the_values_of_the_plan(cfg):
     assert s.arca_spec_path == PROJECT / "data" / "raw" / "arca" / "QRespecificaciones.pdf"
     assert (s.arca_spec_bytes, s.arca_spec_sha256) == (91626, HASH_PDF)
     assert {f.name: (f.split, f.bytes, f.sha256) for f in s.cord_files} == SHARDS
+    assert dataclasses.astuple(s.expected_rows) == (800, 100, 100)   # the split sizes of CORD: 800, 100 and 100 receipts
     c = cfg.calendar
     assert (c.history_start, c.launch_last_day, c.test_first_day, c.test_last_day, c.weekdays_only) == (
         date(2026, 1, 5), date(2026, 9, 30), date(2026, 10, 1), date(2026, 10, 28), True)
@@ -172,6 +173,7 @@ def test_quick_configuration_keeps_every_path_under_data_quick(monkeypatch, tmp_
     assert (cfg.source.arca_spec_bytes, cfg.source.arca_spec_sha256) == (0, "")
     assert {f.split for f in cfg.source.cord_files} == {"train", "validation", "test"}
     assert all((f.bytes, f.sha256) == (0, "") for f in cfg.source.cord_files)
+    assert dataclasses.astuple(cfg.source.expected_rows) == (16, 4, 4), "the tiny CORD of the tests"
     for field in dataclasses.fields(cfg.paths):
         assert quick in getattr(cfg.paths, field.name).parents, field.name
     default = load_config(DEFAULT_CONFIG)
@@ -223,7 +225,8 @@ def test_every_config_key_is_fingerprinted_or_declared_unsealed():
     assert {leaf for leaf in fingerprinted if leaf.startswith("source.")} == {"source.cord_commit", "source.max_image_pixels", "source.max_gt_depth"}
     assert {leaf for leaf in fingerprinted if leaf.startswith("erp.")} == {"erp.post_as"}
     assert {leaf for leaf in leaves if leaf.startswith(("service.", "site.", "paths."))} <= unsealed
-    assert {"source.cord_dir", "source.cord_files", "source.max_shard_bytes", "source.max_rows", "source.arca_spec_path", "source.arca_spec_bytes",
+    assert {"source.cord_dir", "source.cord_files", "source.expected_rows.train", "source.expected_rows.validation", "source.expected_rows.test",
+            "source.max_shard_bytes", "source.max_rows", "source.arca_spec_path", "source.arca_spec_bytes",
             "source.arca_spec_sha256", "erp.mode", "erp.base_url", "erp.token_env", "erp.timeout_s"} <= unsealed
     assert set(INFORMATIVE_KEYS) <= set(leaves), "a key declared informative is not in the configuration"
 
@@ -419,6 +422,23 @@ def test_a_missing_key_of_an_inline_table_is_named_when_the_whole_file_leaves_it
             replace=("file_formats = { png = 0.3, jpeg = 0.3, pdf = 0.4 }", "file_formats = { png = 0.3, jpeg = 0.3 }"))
     refused(tmp_path, r"\[synth.scan_profiles\]: falta la clave 'poor'",
             replace=("scan_profiles = { clean = 0.4, mild = 0.4, poor = 0.2 }", "scan_profiles = { clean = 0.5, mild = 0.5 }"))
+
+
+@pytest.mark.parametrize(("snippet", "match"), [
+    ("[source]\nexpected_rows = { train = 0 }\n", r"\[source\] expected_rows.*train.*1 o más"),
+    ("[source]\nexpected_rows = { validation = -4 }\n", r"\[source\] expected_rows.*validation"),
+    ("[source]\nexpected_rows = { test = 0 }\n", r"\[source\] expected_rows.*test"),
+    ("[source]\nexpected_rows = { dev = 1 }\n", r"\[source.expected_rows\].*'dev'"),
+    ("[source]\nexpected_rows = { train = 800.5 }\n", r"\[source.expected_rows\] train.*un entero"),
+    ('[source]\nexpected_rows = "800"\n', r"\[source.expected_rows\].*una tabla"),
+])
+def test_the_expected_rows_of_each_split_are_checked(tmp_path, snippet, match):
+    refused(tmp_path, match, snippet=snippet)
+
+
+def test_a_missing_split_of_the_expected_rows_is_named_when_the_whole_file_leaves_it_out(tmp_path):
+    refused(tmp_path, r"\[source.expected_rows\]: falta la clave 'test'",
+            replace=("expected_rows = { train = 800, validation = 100, test = 100 }", "expected_rows = { train = 800, validation = 100 }"))
 
 
 def test_the_edges_of_the_generator_ranges_are_accepted(tmp_path):

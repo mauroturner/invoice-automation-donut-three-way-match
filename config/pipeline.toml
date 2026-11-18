@@ -12,6 +12,7 @@ max_gt_depth = 8
 arca_spec_path = "data/raw/arca/QRespecificaciones.pdf"
 arca_spec_bytes = 91626
 arca_spec_sha256 = "a6d0f71e14f282836f07834af76a975dd885386bf972d860878d4b44278deaac"
+expected_rows = { train = 800, validation = 100, test = 100 }   # V05: the split sizes of CORD v2
 
 [[source.cord_files]]                      # one per shard; the six of research/s00 (data/raw/cord/manifest.json)
 split = "train"

@@ -68,6 +68,15 @@ class CordFileConfig:
 
 
 @dataclass(frozen=True)
+class ExpectedRowsConfig:
+    """How many receipts each split of CORD has (V05): 800, 100 and 100 in the real files, 16, 4 and 4 in the tiny CORD of the tests and the quick mode."""
+
+    train: int
+    validation: int
+    test: int
+
+
+@dataclass(frozen=True)
 class SourceConfig:
     cord_dir: Path
     cord_commit: str
@@ -78,6 +87,7 @@ class SourceConfig:
     arca_spec_path: Path
     arca_spec_bytes: int
     arca_spec_sha256: str
+    expected_rows: ExpectedRowsConfig
     cord_files: tuple[CordFileConfig, ...]
 
 
@@ -358,7 +368,7 @@ FINGERPRINT_KEYS: tuple[str, ...] = (
 # instead), where the ERP is and how it is reached, the services, the site's limit and where the outputs go.
 UNSEALED_KEYS: tuple[str, ...] = (
     "source.cord_dir", "source.max_shard_bytes", "source.max_rows", "source.arca_spec_path", "source.arca_spec_bytes", "source.arca_spec_sha256",
-    "source.cord_files",
+    "source.cord_files", "source.expected_rows.train", "source.expected_rows.validation", "source.expected_rows.test",
     "erp.mode", "erp.base_url", "erp.token_env", "erp.timeout_s",
     "service.host", "service.port", "service.token_env",
     "site.max_total_bytes",
@@ -542,6 +552,9 @@ def _check_source(cfg: PipelineConfig) -> None:
         _at_least(getattr(s, key), 1, f"[source] {key}")
     if not _COMMIT.fullmatch(s.cord_commit):
         raise ValueError(f"[source] cord_commit: se esperaban 40 caracteres hexadecimales en minúscula, se recibió {s.cord_commit!r}")
+    for split in CORD_SPLIT_NAMES:
+        if getattr(s.expected_rows, split) < 1:
+            raise ValueError(f"[source] expected_rows: la partición {split!r} debe tener 1 o más recibos, se recibió {getattr(s.expected_rows, split)}")
     quick = _quick_folder(cfg)
     _check_accepted(s.arca_spec_path, s.arca_spec_bytes, s.arca_spec_sha256, "[source] arca_spec_bytes", "[source] arca_spec_sha256", None, "", quick)
     seen: set[str] = set()
