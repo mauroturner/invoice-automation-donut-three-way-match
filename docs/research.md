@@ -271,4 +271,4 @@ Todos los scripts están en `research/`. Se ejecutan con el Python del entorno: 
 
 **Entorno.** `requirements-research.txt`: `torch` 2.14.1 desde el índice CUDA 13.0 (`https://download.pytorch.org/whl/cu130`), `transformers` 5.22.1, `tokenizers` 0.23.3, `sentencepiece` 0.2.2, `huggingface-hub` 2.4.0, `numpy` 2.4.6, `pandas` 2.3.3, `pyarrow` 26.0.1, `Pillow` 13.0.0, `qrcode` 8.2, `opencv-python-headless` 4.14.0.94, `pyzbar` 0.1.9, `zss` 1.2.0. Todas las versiones tienen al menos dos semanas de antigüedad al 18 de noviembre de 2026.
 
-**Caché de modelos.** El checkpoint de Donut (unos 800 MB) se guardó en el caché de Hugging Face del usuario (`C:/Users/user/.cache/huggingface`), fuera del repositorio.
+**Caché de modelos.** El checkpoint de Donut (unos 800 MB) se guardó en el caché de Hugging Face del usuario (`~/.cache/huggingface`), fuera del repositorio.
