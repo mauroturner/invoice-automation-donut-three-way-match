@@ -19,7 +19,7 @@ from decimal import ROUND_HALF_UP, Decimal
 from typing import Any
 
 from invoiceflow.config import SealedConfig
-from invoiceflow.decide import REVIEW, Decision, decide
+from invoiceflow.decide import AUTO_POST, REVIEW, Decision, decide
 from invoiceflow.match import ErpView, PoLine, PurchaseOrder, Reason, Receipt, ReceiptLine
 from invoiceflow.normalize import InvoiceFields, LineFields, normalize
 from invoiceflow.qr import QrInvalid, QrRead, parse_qr_text
@@ -156,7 +156,7 @@ def replay(view: SealedConfig, master: Master, truths: Iterable[InvoiceTruth], d
         payload = qr.payload
         key = (payload.cuit, payload.pto_vta, payload.tipo_cmp, payload.nro_cmp) if payload else (fields.cuit_emisor, fields.pto_vta, fields.tipo, fields.nro)
         known.add(key)
-        if decision.decision == "auto_post" and po is not None:
+        if decision.decision == AUTO_POST and po is not None:
             for line in truth.lines:
                 invoiced[cited][line.code] += line.qty
     return decisions

@@ -61,14 +61,13 @@ from invoiceflow.registry import (
 from invoiceflow.synth.invoices import FIT_SPLITS, InvoiceTruth, invoices
 from invoiceflow.synth.master import master, to_jsonable
 from invoiceflow.synth.render import render
-from invoiceflow.validate import BLOCKING, RuleResult
+from invoiceflow.validate import BLOCKING, WARNING, RuleResult
 
 logger = logging.getLogger(__name__)
 
 CHECKPOINT_SPLITS = "checkpoint"           # the fit_splits of the unmodified checkpoint's figure: it was not fitted here
 ORACLE_SPLITS = "none"                     # the oracle has no model
 EXTENSIONS = {"png": ".png", "jpeg": ".jpg", "pdf": ".pdf"}
-WARNING = "advertencia"
 # rule: (name, severity, scope, aggregation), as in the plan's table (section 6)
 MODEL_RULES: dict[str, tuple[str, str, str, str]] = {
     "M02": ("El artefacto y el tokenizador tienen la huella registrada antes de leerlos; solo safetensors", BLOCKING, "modelo", "per_run"),
