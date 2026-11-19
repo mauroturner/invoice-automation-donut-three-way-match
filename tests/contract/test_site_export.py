@@ -15,7 +15,7 @@ from invoiceflow.site_export import MANIFEST_FILE, SITE_FILES, SiteExportError, 
 
 ENVELOPE = ("schema_version", "run_key", "as_of", "artifact_sha256", "cord_commit", "attribution", "synthetic_note_es")
 TOP_KEYS = {
-    "summary.json": {"status", "evaluation_status", "headline", "criteria", "seal", "sealed_from"},
+    "summary.json": {"status", "evaluation_status", "headline", "criteria", "seal", "sealed_from", "post_seal_analysis"},
     "data.json": {"cord", "synthetic", "qr_spec"},
     "algorithms.json": {"checkpoint_on_invoices", "choice", "fields", "qr", "match_rules", "baselines", "cord", "example_invoice"},
     "operation.json": {"days", "review_mix", "erp", "smoke_erpnext"},
@@ -74,6 +74,10 @@ def test_the_headline_and_the_sections_are_the_figures_of_the_seal_and_the_star_
     metrics = seal["test"]["metrics"]
     h = summary["headline"]
     assert summary["evaluation_status"] == "sealed" and summary["status"] == "running" and summary["sealed_from"] in ("warehouse", "seal") and h["days"] == 3
+    analysis = json.loads(site_files.state.seal.with_name("post_seal_analysis.json").read_text(encoding="utf-8"))
+    assert summary["post_seal_analysis"] == analysis and analysis["synthetic"] is True and analysis["sealed"] is False, "the analyses after the seal travel beside the sealed figures (D59)"
+    c08 = next(c for c in summary["criteria"] if c["criterion_id"] == "C08")
+    assert c08["sealed_verdict_es"] == next(c["verdict_es"] for c in seal["test"]["criteria"] if c["id"] == "C08") and "por factura" in c08["verdict_es"]
     assert h["straight_through_known"] == round(metrics["straight_through"]["known"]["rate"], 3) and h["line_exact_known"] == round(metrics["lines"]["known"]["rate"], 3)
     assert h["bad_post_rate"] == {"rate": round(metrics["bad_post"]["rate"], 3), "ci_high": round(metrics["bad_post"]["ci_high"], 3)} and h["qr_read"] == round(metrics["qr"]["rate"], 3)
     ops = site_files.site.operation

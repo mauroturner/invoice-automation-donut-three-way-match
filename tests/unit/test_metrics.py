@@ -123,3 +123,26 @@ def test_the_paired_resample_is_seeded_pairs_the_units_and_reports_the_mean_diff
     assert metrics.paired_difference([], [], resamples=50, seed=0) == (None, None, None)
     with pytest.raises(ValueError, match="pares"):
         metrics.paired_difference([1.0], [1.0, 2.0], resamples=5, seed=0)
+
+
+def test_the_difference_of_two_rates_is_resampled_by_unit_as_a_ratio_of_sums_in_each_resample():
+    """C08 as requirements 8.1 define it (D59): a bad-post rate is bad posts over auto-posts, so the difference of two rates is resampled by invoice, the rate of each side taken over the
+    invoices of the resample that it posted. The draws are the ones of ``paired_difference`` with the same seed, worked out here by hand."""
+    import numpy as np
+
+    posted_a = [1.0, 1.0, 1.0, 0.0, 1.0, 0.0, 1.0, 1.0, 0.0, 1.0]
+    bad_a = [1.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0]
+    posted_b = [1.0, 0.0, 1.0, 0.0, 1.0, 0.0, 0.0, 1.0, 0.0, 1.0]
+    bad_b = [0.0] * 10
+    value, low, high = metrics.paired_rate_difference(bad_a, posted_a, bad_b, posted_b, resamples=400, seed=0)
+    assert value == pytest.approx(3 / 7 - 0 / 5)
+    draws = np.random.default_rng(0).integers(0, 10, size=(400, 10))
+    a, pa = np.asarray(bad_a)[draws].sum(1), np.asarray(posted_a)[draws].sum(1)
+    b, pb = np.asarray(bad_b)[draws].sum(1), np.asarray(posted_b)[draws].sum(1)
+    keep = (pa > 0) & (pb > 0)
+    diffs = a[keep] / pa[keep] - b[keep] / pb[keep]
+    assert (low, high) == (pytest.approx(float(np.percentile(diffs, 2.5))), pytest.approx(float(np.percentile(diffs, 97.5))))
+    assert metrics.paired_rate_difference([], [], [], [], resamples=10, seed=0) == (None, None, None)
+    assert metrics.paired_rate_difference([0.0], [0.0], [0.0], [1.0], resamples=10, seed=0) == (None, None, None), "a side that posted nothing has no rate"
+    with pytest.raises(ValueError, match="pares"):
+        metrics.paired_rate_difference([1.0], [1.0], [1.0, 0.0], [1.0, 1.0], resamples=5, seed=0)

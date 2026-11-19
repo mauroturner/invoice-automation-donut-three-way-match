@@ -165,3 +165,24 @@ def paired_difference(a: Sequence[float], b: Sequence[float], *, resamples: int,
     draws = np.random.default_rng(seed).integers(0, len(differences), size=(resamples, len(differences)))
     means = differences[draws].mean(axis=1)
     return value, float(np.percentile(means, 2.5)), float(np.percentile(means, 97.5))
+
+
+def paired_rate_difference(bad_a: Sequence[float], posted_a: Sequence[float], bad_b: Sequence[float], posted_b: Sequence[float], *, resamples: int,
+                           seed: int) -> tuple[float | None, float | None, float | None]:
+    """``(rate_a − rate_b, low, high)``, each rate a ratio of sums (``sum(bad) / sum(posted)``, the bad-post rate of requirements 8.1), with the 95 % interval of resampling the units (one invoice
+    carries both sides) `resamples` times with the seed `seed`: the draws of ``paired_difference``, and in each resample each side's rate over the units of the resample it posted. A resample in
+    which a side posted nothing has no rate and is left out (D59). ``(None, None, None)`` with no units or a side that posted nothing."""
+    import numpy as np
+
+    columns = [np.asarray(c, dtype=float) for c in (bad_a, posted_a, bad_b, posted_b)]
+    if len({len(c) for c in columns}) != 1:
+        raise ValueError(f"paired_rate_difference: las cuatro columnas tienen {[len(c) for c in columns]} valores; se esperaban pares de la misma unidad")
+    a, pa, b, pb = columns
+    if not len(a) or not pa.sum() or not pb.sum():
+        return None, None, None
+    value = float(a.sum() / pa.sum() - b.sum() / pb.sum())
+    draws = np.random.default_rng(seed).integers(0, len(a), size=(resamples, len(a)))
+    sa, spa, sb, spb = (c[draws].sum(axis=1) for c in columns)
+    keep = (spa > 0) & (spb > 0)
+    diffs = sa[keep] / spa[keep] - sb[keep] / spb[keep]
+    return value, float(np.percentile(diffs, 2.5)), float(np.percentile(diffs, 97.5))

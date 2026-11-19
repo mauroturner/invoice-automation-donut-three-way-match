@@ -187,3 +187,52 @@ def test_a_qr_that_was_not_read_is_not_a_read_one_and_the_page_goes_to_review(qu
     printed = sum(1 for t in world.all_truths() if t.qr_text is not None)
     assert (row["qr_printed"], row["qr_read_ok"], row["decision"], row["first_reason"]) == (1, 0, "review", "qr_not_read")
     assert result.figures["qr"]["printed"] == printed and result.figures["qr"]["read"] == printed - 1 and result.figures["qr"]["rate"] == pytest.approx((printed - 1) / printed)
+
+
+# --- the analyses after the seal (D59, D60): beside the sealed figures, never in their place ---------------------------------------------
+
+
+def test_c08_as_preregistered_is_computed_beside_the_sealed_one_from_the_same_decisions(perfect):
+    """B1 of the evaluation (D59): requirements 8.1 define C08 over the bad-post rates (bad posts over auto-posts) of B1 and the flow; the sealed C08 is the difference per invoice. The analysis
+    takes the counts the sealed baselines have, and the sealed figure is what it was."""
+    world, conn = perfect
+    truths = world.all_truths()
+    sealed = evaluation.evaluate_test(conn, world.view, world.master, truths, repeat_new=0)
+    analysis = evaluation.post_seal_analysis(conn, world.view, world.master, truths)
+    b1, flow = sealed.figures["baselines"]["b1:all"], sealed.figures["baselines"]["flow:all"]
+    pre = analysis["c08_preregistered"]
+    assert analysis["sealed"] is False and analysis["synthetic"] is True and analysis["invoices"] == len(truths) == 18
+    assert (pre["b1"]["posts"], pre["b1"]["bad"], pre["flow"]["posts"], pre["flow"]["bad"]) == (b1["auto_post"], b1["bad_post"], flow["auto_post"], flow["bad_post"])
+    assert b1["auto_post"] > 0 and pre["value"] == pytest.approx(b1["bad_post"] / b1["auto_post"] - flow["bad_post"] / flow["auto_post"])
+    assert pre["ci_low"] <= pre["value"] <= pre["ci_high"] and pre["passed"] is (pre["ci_low"] > 0)
+    assert evaluation.evaluate_test(conn, world.view, world.master, truths, repeat_new=0).figures == sealed.figures, "computing the analysis changes nothing that is sealed"
+
+
+def test_the_close_writes_the_analysis_beside_the_seal_and_the_summary_tells_c08_per_invoice_with_the_sealed_sentence_kept(perfect, tmp_path):
+    from invoiceflow import texts
+
+    world, conn = perfect
+    project = make_project(tmp_path / "project")
+    seal = tmp_path / "reports" / "model_seal.json"
+    write_launch_seal(seal, launch_document(world.view))
+    args = dict(seal_path=seal, chosen=Reads({"total": {"total_price": "1"}}), checkpoint=Reads({}), repeat_new=0)
+    reporting.evaluate(conn, project.cfg, world.view, RunMeta("close-1", datetime(2026, 10, 6)), world.master, world.all_truths(), **args)
+    kept, analysis_path = seal.read_bytes(), seal.with_name("post_seal_analysis.json")
+    first = json.loads(analysis_path.read_text(encoding="utf-8"))
+    assert first["seal_sha256"] == __import__("hashlib").sha256(kept).hexdigest() and first["c08_preregistered"]["b1"]["posts"] > 0
+    reporting.evaluate(conn, project.cfg, world.view, RunMeta("close-2", datetime(2026, 10, 7)), world.master, world.all_truths(), **args)
+    assert seal.read_bytes() == kept and json.loads(analysis_path.read_text(encoding="utf-8")) == first, "a repetition leaves the seal and rewrites the same analysis"
+    summary = reporting.build_summary(conn, world.view, seal_path=seal)
+    assert summary["post_seal_analysis"] == first
+    c08 = next(c for c in summary["criteria"] if c["criterion_id"] == "C08")
+    sealed_c08 = next(c for c in read_seal(seal)["test"]["criteria"] if c["id"] == "C08")
+    metrics_ = read_seal(seal)["test"]["metrics"]
+    assert c08["sealed_verdict_es"] == sealed_c08["verdict_es"] and c08["verdict_es"] != sealed_c08["verdict_es"] and c08["passed"] is sealed_c08["passed"]
+    b1_bad, invoices = metrics_["baselines"]["b1:all"]["bad_post"], metrics_["bad_post"]["invoices"]
+    assert f"cargó mal {b1_bad} de las {invoices}" in c08["verdict_es"] and "por factura" in c08["verdict_es"]
+    assert texts.es(metrics_["b1_minus_flow"]["value"] * 100, 1) in c08["verdict_es"] and "%" not in c08["verdict_es"].split("por factura")[0], "per invoice: counts, not rates per post"
+    assert all("sealed_verdict_es" not in c for c in summary["criteria"] if c["criterion_id"] != "C08")
+    text = reporting.summary_markdown(summary)
+    assert "| ID | Criterio | Lo que prueba el umbral | Veredicto |" in text and "Análisis posteriores al sello" in text and "| Valor |" not in text
+    assert texts.es(first["c08_preregistered"]["value"] * 100, 1) in text and "texto sellado" in text
+

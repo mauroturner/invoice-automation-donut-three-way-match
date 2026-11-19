@@ -96,3 +96,45 @@ def verdict(cid: str, passed: bool, **f: object) -> str:
         return (f"{f['equal']} de {f['posts']} cargas automáticas se leyeron de vuelta del ERP iguales a lo decidido (sintético) y repetir el último día creó {f['repeat']} facturas nuevas; "
                 f"debían coincidir todas y no crearse ninguna.{mark}")
     raise KeyError(cid)
+
+
+# --- what is published beside the sealed sentences (D59) ---------------------------------------------------------------------------------
+
+
+def c08_per_invoice_verdict(passed: bool, *, b1_bad: int, flow_bad: int, invoices: int, value: float, low: float, high: float) -> str:
+    """The sentence the summary tells for the sealed C08. The sealed sentence (``verdict`` above, kept as it is so the seal is rebuilt) writes the bad-post rates per auto-post of B1 and the flow
+    beside a difference computed per invoice of the whole test; this one tells only what the seal computed, per invoice, and says where the preregistered difference of rates is (D59)."""
+    mark = "" if passed else " No se cumple."
+    return (f"Sobre las {invoices} facturas sintéticas de la prueba, B1 (solo el QR en dos vías) cargó mal {b1_bad} de las {invoices} y el flujo {flow_bad}: por factura, la diferencia es "
+            f"{es(value * 100, 1)} puntos (intervalo del 95 %, {es(low * 100, 1)} a {es(high * 100, 1)}); el límite inferior debía ser mayor que 0.{mark} Es la cifra sellada; la diferencia de las tasas "
+            "de carga mala que fija el criterio, por carga, está entre los análisis posteriores al sello (D59).")
+
+
+def threshold_figure(criterion: dict) -> str:
+    """What the threshold of `criterion` tests, as the summary's column shows it (A1 of the evaluation, D59): the limit of the interval for C01 (points of TED), C05 (Wilson's upper limit) and C08
+    (points per invoice), the rate itself for the rest; «sin umbral» for C10 and «sin dato» for a criterion that cannot be computed."""
+    cid = criterion["criterion_id"]
+    if criterion.get("passed") is None and criterion.get("value") is None:
+        return "sin umbral"
+    if cid == "C01":
+        text = "sin dato" if criterion.get("ci_low") is None else f"{es(criterion['ci_low'], 2)} puntos (límite inferior)"
+    elif cid == "C05":
+        text = "sin dato" if criterion.get("ci_high") is None else f"{es(criterion['ci_high'], 3)} (límite superior de Wilson)"
+    elif cid == "C08":
+        text = "sin dato" if criterion.get("ci_low") is None else f"{es(criterion['ci_low'] * 100, 1)} puntos (límite inferior, por factura)"
+    else:
+        text = es(criterion["value"], 3) if criterion.get("value") is not None else "sin dato"
+    return f"{text} (sintético)" if criterion.get("synthetic") and text != "sin dato" else text
+
+
+def c08_preregistered_line(analysis: dict) -> str:
+    """The line of the summary that tells C08 as requirements 8.1 define it, from ``evaluation.post_seal_analysis``."""
+    pre = analysis["c08_preregistered"]
+    b1, flow = pre["b1"], pre["flow"]
+    if pre["value"] is None:
+        return f"- **C08 como lo fija el preregistro**: no se puede calcular, porque B1 cargó {b1['posts']} facturas y el flujo {flow['posts']}, y una tasa sin cargas no existe (sintético)."
+    verdict = "se cumple también así" if pre["passed"] else "así no se cumple"
+    return (f"- **C08 como lo fija el preregistro** (requirements, sección 8.1: la tasa de carga mala es cargas malas sobre facturas con `auto_post`): B1 cargó mal {b1['bad']} de sus {b1['posts']} "
+            f"cargas ({es(b1['rate'], 1, percent=True)}) y el flujo {flow['bad']} de {flow['posts']} ({es(flow['rate'], 1, percent=True)}); la diferencia de las tasas es {es(pre['value'] * 100, 1)} "
+            f"puntos (intervalo del 95 %, {es(pre['ci_low'] * 100, 1)} a {es(pre['ci_high'] * 100, 1)}, remuestreo pareado por factura): {verdict} (sintético). El veredicto sellado de C08 no cambia; "
+            "el texto sellado, que pone esas tasas por carga al lado de la diferencia por factura, queda en el sello y en el almacén.")

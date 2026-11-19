@@ -1,11 +1,16 @@
 """The evaluation as a task and the summary that tells it (RF20; AC22, AC24; plan section 16; decisions D19, D21): ``evaluate`` runs once at the close and writes the sealed rows and the test part of the
 seal; ``build_summary`` reads what there is, in this order of trust: the sealed rows of the warehouse, else the criteria **rebuilt from the seal** (a warehouse without the sealed rows: a new one, a quick
 copy, the site's build), else nothing yet (before the close the summary says when the test is evaluated and shows the validation figures with the partitions their model saw).
+
+Beside the seal, and never in it, the close writes ``post_seal_analysis.json`` (``evaluation.post_seal_analysis``, D59): what was found after the seal and is published with its measured impact
+next to the sealed figures. The summary tells C08 with the sentence of what the seal computed (per invoice) and keeps the sealed sentence as ``sealed_verdict_es``.
 """
 
 from __future__ import annotations
 
 import dataclasses
+import hashlib
+import json
 import logging
 import sqlite3
 from collections.abc import Mapping, Sequence
@@ -23,6 +28,7 @@ from invoiceflow.synth.master import Master
 
 logger = logging.getLogger(__name__)
 
+POST_SEAL_FILE = "post_seal_analysis.json"
 CRITERION_COLUMNS = ("criterion_id", "name_es", "value", "baseline_value", "ci_low", "ci_high", "threshold_es", "passed", "seen_by_research", "seen_by_planner", "synthetic", "verdict_es")
 
 
@@ -82,7 +88,32 @@ def evaluate(conn: sqlite3.Connection, cfg: PipelineConfig, view: SealedConfig, 
             "operation": {"days": result.figures["days"], "invoices": len(result.invoices)}}
     outcome = write_test_seal(seal_path, part)
     logger.info("evaluate: state %s, seal %s, rows %s", state, outcome, rows)
+    if state in ("first", "repeat"):
+        write_post_seal_analysis(seal_path, evaluation.post_seal_analysis(conn, view, master, truths), config_fingerprint(view))
     return {"state": state, "seal": outcome, "criteria": criteria, "rows": rows, "result": result}
+
+
+def post_seal_path(seal_path: Path) -> Path:
+    """Where the analyses after the seal live: beside the seal, in a file of their own."""
+    return Path(seal_path).with_name(POST_SEAL_FILE)
+
+
+def write_post_seal_analysis(seal_path: Path, analysis: Mapping[str, Any], config_sha256: str) -> Path:
+    """Write the analyses after the seal (atomically), bound to the bytes of the seal they were computed beside: a repetition rewrites the same file and the seal is never touched."""
+    document = {**analysis, "config_sha256": config_sha256, "seal_sha256": hashlib.sha256(Path(seal_path).read_bytes()).hexdigest()}
+    return write_atomic(post_seal_path(seal_path), json.dumps(document, indent=1, ensure_ascii=False, sort_keys=True) + "\n")
+
+
+def read_post_seal_analysis(seal_path: Path) -> dict[str, Any] | None:
+    """The analyses after the seal, or None when there are none or they were computed beside another seal (a stale file is never published)."""
+    path, seal = post_seal_path(seal_path), Path(seal_path)
+    if not path.is_file() or not seal.is_file():
+        return None
+    document = json.loads(path.read_text(encoding="utf-8"))
+    if document.get("seal_sha256") != hashlib.sha256(seal.read_bytes()).hexdigest():
+        logger.warning("%s was computed beside another seal: it is not published", path.name)
+        return None
+    return document
 
 
 # --- the summary ------------------------------------------------------------------------------------------------------------------------
@@ -113,7 +144,22 @@ def build_summary(conn: sqlite3.Connection, view: SealedConfig, *, seal_path: Pa
         summary.update(source="seal", criteria=[criterion_dict(c) for c in evaluation.criteria_from_seal(document)])
     else:
         summary["criteria"] = pending_criteria(view)
+    if summary["source"] != "pending" and document is not None and document.get("test") is not None:
+        summary["criteria"] = [_published(c, document["test"]["metrics"]) for c in summary["criteria"]]
+        analysis = read_post_seal_analysis(seal_path)
+        if analysis is not None:
+            summary["post_seal_analysis"] = analysis
     return summary
+
+
+def _published(criterion: dict[str, Any], metrics: Mapping[str, Any]) -> dict[str, Any]:
+    """C08 told with the sentence of what the seal computed, per invoice (D59), and the sealed sentence kept beside it as ``sealed_verdict_es``; every other criterion as it was sealed."""
+    versus, baselines = metrics.get("b1_minus_flow") or {}, metrics.get("baselines") or {}
+    if criterion["criterion_id"] != "C08" or criterion["passed"] is None or versus.get("ci_low") is None or "b1:all" not in baselines or "flow:all" not in baselines:
+        return criterion
+    verdict = texts.c08_per_invoice_verdict(bool(criterion["passed"]), b1_bad=baselines["b1:all"]["bad_post"], flow_bad=baselines["flow:all"]["bad_post"],
+                                            invoices=metrics["bad_post"]["invoices"], value=versus["value"], low=versus["ci_low"], high=versus["ci_high"])
+    return {**criterion, "verdict_es": verdict, "sealed_verdict_es": criterion["verdict_es"]}
 
 
 def pending_criteria(view: SealedConfig) -> list[dict[str, Any]]:
@@ -143,6 +189,13 @@ def _validation_lines(validation: Mapping[str, Any]) -> list[str]:
     return out
 
 
+def _post_seal_lines(analysis: Mapping[str, Any] | None) -> list[str]:
+    if not analysis:
+        return []
+    return ["", "### Análisis posteriores al sello", "", "No reemplazan ninguna cifra sellada: se calcularon después del sello, sobre las mismas decisiones emitidas y la misma verdad sintética, y se "
+            "publican al lado de lo sellado (D59).", "", texts.c08_preregistered_line(dict(analysis))]
+
+
 def summary_markdown(summary: Mapping[str, Any]) -> str:
     """The summary as Markdown: the table of C01-C10 with each verdict, what does not pass named with its number, the validation figures and, before the close, when the test is evaluated."""
     lines = ["## Resumen de la evaluación", ""]
@@ -151,12 +204,10 @@ def summary_markdown(summary: Mapping[str, Any]) -> str:
     else:
         failing = [c["criterion_id"] for c in summary["criteria"] if c["passed"] is False]
         lines += [("Todos los criterios con umbral se cumplen." if not failing else f"No se cumple: {', '.join(failing)}."), "", "Cada cifra marcada (sintético) sale de facturas que genera este proyecto.", ""]
-    lines += ["| ID | Criterio | Valor | Veredicto |", "| --- | --- | --- | --- |"]
+    lines += ["| ID | Criterio | Lo que prueba el umbral | Veredicto |", "| --- | --- | --- | --- |"]
     for c in summary["criteria"]:
-        value = "sin umbral" if c["passed"] is None and c["value"] is None else texts.es(c["value"], 3) if c["value"] is not None else "sin dato"
-        if c["synthetic"] and c["value"] is not None:
-            value += " (sintético)"
-        lines.append(f"| {c['criterion_id']} | {_cell(c['name_es'])} | {_cell(value)} | {_cell(c['verdict_es'])} |")
+        lines.append(f"| {c['criterion_id']} | {_cell(c['name_es'])} | {_cell(texts.threshold_figure(c))} | {_cell(c['verdict_es'])} |")
+    lines += _post_seal_lines(summary.get("post_seal_analysis"))
     lines += _validation_lines(summary.get("validation") or {})
     return "\n".join(lines) + "\n"
 
@@ -178,4 +229,5 @@ def replace_block(text: str, name: str, start: str, end: str, content: str) -> s
     return text[: first + len(start)] + "\n" + content.strip("\n") + "\n" + text[last:]
 
 
-__all__ = ["RESULTS_END", "RESULTS_START", "build_summary", "close_day", "evaluate", "pending_criteria", "replace_block", "store_result", "summary_markdown", "write_summary"]
+__all__ = ["POST_SEAL_FILE", "RESULTS_END", "RESULTS_START", "build_summary", "close_day", "evaluate", "pending_criteria", "post_seal_path", "read_post_seal_analysis", "replace_block",
+           "store_result", "summary_markdown", "write_post_seal_analysis", "write_summary"]

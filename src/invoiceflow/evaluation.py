@@ -204,14 +204,9 @@ def evaluate_test(conn: Any, view: SealedConfig, master: Master, truths: Sequenc
     by_key = {t.invoice_key: t for t in truths}
 
     def judged(decisions: Mapping[str, Decision]) -> tuple[dict[str, str], dict[str, bool]]:
-        names = {k: d.decision for k, d in decisions.items()}
-        wrong = {k: names[k] == "auto_post" and _would_be_bad(by_key[k], conn, view) for k in names}
-        return names, wrong
+        return _judged(conn, view, by_key, decisions)
 
-    def from_b1(truth: InvoiceTruth, erp: ErpView) -> Decision:
-        return b1(read_fields(conn, truth.invoice_key), read_qr_row(conn, truth.invoice_key), erp, view)
-
-    worlds["b1"], bad_of["b1"] = judged(replay(view, master, truths, from_b1))
+    worlds["b1"], bad_of["b1"] = judged(_b1_world(conn, view, master, truths))
     worlds["b3"], bad_of["b3"] = judged(replay(view, master, truths, lambda t, erp: decide(truth_fields(t), truth_qr(t, view), erp, view)))
     if checkpoint_trees is not None:
         worlds["b2"], bad_of["b2"] = judged(replay(view, master, truths, lambda t, erp: b2(checkpoint_trees.get(t.invoice_key, {}), read_qr_row(conn, t.invoice_key), erp, view)))
@@ -228,6 +223,55 @@ def evaluate_test(conn: Any, view: SealedConfig, master: Master, truths: Sequenc
     value, low, high = metrics.paired_difference(paired_b1, paired_flow, resamples=view.evaluation.resamples, seed=view.evaluation.seed)
     figures["b1_minus_flow"] = {"value": value, "ci_low": low, "ci_high": high, "b1_rate": b1_rate, "flow_rate": flow_rate}
     return EvaluationResult(figures, rows, _field_rows(conn, by_split), baselines)
+
+
+def _judged(conn: Any, view: SealedConfig, by_key: Mapping[str, InvoiceTruth], decisions: Mapping[str, Decision]) -> tuple[dict[str, str], dict[str, bool]]:
+    """A baseline's decision by invoice and whether each one is a bad post (``_would_be_bad`` of the ones it posted)."""
+    names = {k: d.decision for k, d in decisions.items()}
+    return names, {k: names[k] == "auto_post" and _would_be_bad(by_key[k], conn, view) for k in names}
+
+
+def _b1_world(conn: Any, view: SealedConfig, master: Master, truths: Sequence[InvoiceTruth]) -> dict[str, Decision]:
+    """B1 over the test in its own ERP world, as the seal has it: the QR the flow read, the order number the flow read for the decision and the page's order (the truth's) for the view."""
+
+    def from_b1(truth: InvoiceTruth, erp: ErpView) -> Decision:
+        return b1(read_fields(conn, truth.invoice_key), read_qr_row(conn, truth.invoice_key), erp, view)
+
+    return replay(view, master, truths, from_b1)
+
+
+def _flow_judged(conn: Any, view: SealedConfig, truths: Sequence[InvoiceTruth]) -> tuple[dict[str, str], dict[str, bool]]:
+    """The flow's issued decision by invoice and whether it is a bad post, as ``evaluate_test`` judges them."""
+    issued = dict(conn.execute("SELECT invoice_key, decision FROM decisions"))
+    names = {t.invoice_key: issued[t.invoice_key] for t in truths}
+    bad = {t.invoice_key: _bad_post(t, names[t.invoice_key], read_qr_row(conn, t.invoice_key), read_fields(conn, t.invoice_key), truth_qr(t, view)) for t in truths}
+    return names, bad
+
+
+def _rate_difference(keys: Sequence[str], a: tuple[Mapping[str, str], Mapping[str, bool]], b: tuple[Mapping[str, str], Mapping[str, bool]], view: SealedConfig) -> dict[str, Any]:
+    """C08 as requirements 8.1 define it: the bad-post rate of `a` (bad posts over auto-posts) less the one of `b`, resampled by invoice (``metrics.paired_rate_difference``)."""
+
+    def side(world: tuple[Mapping[str, str], Mapping[str, bool]]) -> tuple[list[float], list[float], dict[str, Any]]:
+        names, bad = world
+        posted = [float(names[k] == "auto_post") for k in keys]
+        wrong = [float(names[k] == "auto_post" and bad[k]) for k in keys]
+        return wrong, posted, {"posts": int(sum(posted)), "bad": int(sum(wrong)), "rate": _rate(int(sum(wrong)), int(sum(posted)))}
+
+    bad_a, posted_a, figures_a = side(a)
+    bad_b, posted_b, figures_b = side(b)
+    value, low, high = metrics.paired_rate_difference(bad_a, posted_a, bad_b, posted_b, resamples=view.evaluation.resamples, seed=view.evaluation.seed)
+    return {"b1": figures_a, "flow": figures_b, "value": value, "ci_low": low, "ci_high": high, "passed": None if low is None else low > 0}
+
+
+def post_seal_analysis(conn: Any, view: SealedConfig, master: Master, truths: Sequence[InvoiceTruth]) -> dict[str, Any]:
+    """What is published **beside** the sealed figures and never in their place (D59, after D45 of project 06): computed from the same issued rows and the same truth as ``evaluate_test``, it
+    changes nothing that is sealed. ``c08_preregistered`` is C08 as requirements 8.1 define it, the difference of the bad-post rates (bad posts over auto-posts) of the sealed B1 and the flow,
+    which the seal computed per invoice of the whole test instead."""
+    by_key = {t.invoice_key: t for t in truths}
+    keys = sorted(by_key)
+    flow = _flow_judged(conn, view, truths)
+    sealed_b1 = _judged(conn, view, by_key, _b1_world(conn, view, master, truths))
+    return {"sealed": False, "synthetic": True, "invoices": len(keys), "decisions": ["D59"], "c08_preregistered": _rate_difference(keys, sealed_b1, flow, view)}
 
 
 def _would_be_bad(truth: InvoiceTruth, conn: Any, view: SealedConfig) -> bool:
@@ -405,4 +449,5 @@ def criteria_from_seal(seal: Mapping[str, Any]) -> list[Criterion]:
     return rebuilt
 
 
-__all__ = ["Criterion", "EvaluationError", "EvaluationResult", "criteria_from_seal", "criteria_of", "evaluate_cord", "evaluate_criteria", "evaluate_test", "read_fields", "read_qr_row"]
+__all__ = ["Criterion", "EvaluationError", "EvaluationResult", "criteria_from_seal", "criteria_of", "evaluate_cord", "evaluate_criteria", "evaluate_test", "post_seal_analysis", "read_fields",
+           "read_qr_row"]

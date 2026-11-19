@@ -155,7 +155,8 @@ def _summary(conn: sqlite3.Connection, run: RunMeta, view: Any, summary: dict[st
               "test": None if not (seal or {}).get("test") else {"run_key": seal["test"]["run_key"], "as_of": seal["test"]["as_of"]},
                                                                                                                                                                              "synthetic": False} if seal else None
     return {"status": row[0] if row else "running", "evaluation_status": status, "headline": headline, "criteria": [{**c, "synthetic": bool(c["synthetic"])} for c in summary["criteria"]],
-            "seal": sealed, "sealed_from": summary["source"] if status != "pending" else None}
+            "seal": sealed, "sealed_from": summary["source"] if status != "pending" else None,
+            "post_seal_analysis": summary.get("post_seal_analysis") if status == "sealed" else None}
 
 
 # --- data.json -----------------------------------------------------------------------------------------------------------------------
