@@ -1,0 +1,83 @@
+{
+ "b1_read_order": {
+  "baselines": {
+   "all": {
+    "auto_post": 189,
+    "bad_post": 41,
+    "bad_post_rate": 0.21693121693121692,
+    "ci_high": 0.28101526858101533,
+    "ci_low": 0.16412519903593034,
+    "review_recall": 0.9580838323353293,
+    "straight_through": 0.3418013856812933
+   },
+   "test_known": {
+    "auto_post": 175,
+    "bad_post": 27,
+    "bad_post_rate": 0.15428571428571428,
+    "ci_high": 0.21517163883525228,
+    "ci_low": 0.10825199414499395,
+    "review_recall": 0.9213483146067416,
+    "straight_through": 0.7014218009478673
+   },
+   "test_new": {
+    "auto_post": 14,
+    "bad_post": 14,
+    "bad_post_rate": 1.0,
+    "ci_high": 1.0,
+    "ci_low": 0.7846829880728186,
+    "review_recall": 1.0,
+    "straight_through": 0.0
+   }
+  },
+  "c08_per_invoice": {
+   "b1_bad": 41,
+   "ci_high": 0.09,
+   "ci_low": 0.05,
+   "flow_bad": 0,
+   "invoices": 600,
+   "passed": true,
+   "value": 0.06833333333333333
+  },
+  "c08_preregistered": {
+   "b1": {
+    "bad": 41,
+    "posts": 189,
+    "rate": 0.21693121693121692
+   },
+   "ci_high": 0.27977268806073147,
+   "ci_low": 0.1601786820904772,
+   "flow": {
+    "bad": 0,
+    "posts": 147,
+    "rate": 0.0
+   },
+   "passed": true,
+   "value": 0.21693121693121692
+  }
+ },
+ "c08_preregistered": {
+  "b1": {
+   "bad": 46,
+   "posts": 197,
+   "rate": 0.233502538071066
+  },
+  "ci_high": 0.2977557972746832,
+  "ci_low": 0.17459706959706958,
+  "flow": {
+   "bad": 0,
+   "posts": 147,
+   "rate": 0.0
+  },
+  "passed": true,
+  "value": 0.233502538071066
+ },
+ "config_sha256": "114913c99b42d6f5a6b7a6e14eaa082f82b23d8c2452f357140475bca8978993",
+ "decisions": [
+  "D59",
+  "D60"
+ ],
+ "invoices": 600,
+ "seal_sha256": "51884acb8d84d0dfe1651323d04b3e2e1477af99cb1b96f4fda480d1ccff2ce2",
+ "sealed": false,
+ "synthetic": true
+}

@@ -107,12 +107,13 @@
    "criterion_id": "C08",
    "name_es": "El cruce de tres vías evita cargas malas",
    "passed": true,
+   "sealed_verdict_es": "Sobre las facturas sintéticas de la prueba, B1 (solo el QR en dos vías) cargó mal el 23,4 % y el flujo el 0,0 %; la diferencia es 7,7 puntos (intervalo del 95 %, 5,7 a 10,0); el límite inferior debía ser mayor que 0.",
    "seen_by_planner": "no",
    "seen_by_research": "no",
    "synthetic": true,
    "threshold_es": "límite inferior del intervalo del 95 % de (tasa de carga mala de B1 − la del flujo) > 0",
    "value": 0.0,
-   "verdict_es": "Sobre las facturas sintéticas de la prueba, B1 (solo el QR en dos vías) cargó mal el 23,4 % y el flujo el 0,0 %; la diferencia es 7,7 puntos (intervalo del 95 %, 5,7 a 10,0); el límite inferior debía ser mayor que 0."
+   "verdict_es": "Sobre las facturas sintéticas de la prueba, B1 (solo el QR en dos vías) cargó mal 46 de las 600 y el flujo 0: por factura, la diferencia es 7,7 puntos (intervalo del 95 %, 5,7 a 10,0); el límite inferior debía ser mayor que 0. Es la cifra sellada; la diferencia de las tasas de carga mala que fija el criterio, por carga, está entre los análisis posteriores al sello (D59)."
   },
   {
    "baseline_value": null,
@@ -143,6 +144,89 @@
    "verdict_es": "Informativo: sin umbral. Las líneas base, el recuerdo por clase sembrada, la lectura por campo, perfil y tamaño del QR y los 20 días de operación están en el resumen (0 variantes)."
   }
  ],
+ "post_seal_analysis": {
+  "b1_read_order": {
+   "baselines": {
+    "all": {
+     "auto_post": 189,
+     "bad_post": 41,
+     "bad_post_rate": 0.21693121693121692,
+     "ci_high": 0.28101526858101533,
+     "ci_low": 0.16412519903593034,
+     "review_recall": 0.9580838323353293,
+     "straight_through": 0.3418013856812933
+    },
+    "test_known": {
+     "auto_post": 175,
+     "bad_post": 27,
+     "bad_post_rate": 0.15428571428571428,
+     "ci_high": 0.21517163883525228,
+     "ci_low": 0.10825199414499395,
+     "review_recall": 0.9213483146067416,
+     "straight_through": 0.7014218009478673
+    },
+    "test_new": {
+     "auto_post": 14,
+     "bad_post": 14,
+     "bad_post_rate": 1.0,
+     "ci_high": 1.0,
+     "ci_low": 0.7846829880728186,
+     "review_recall": 1.0,
+     "straight_through": 0.0
+    }
+   },
+   "c08_per_invoice": {
+    "b1_bad": 41,
+    "ci_high": 0.09,
+    "ci_low": 0.05,
+    "flow_bad": 0,
+    "invoices": 600,
+    "passed": true,
+    "value": 0.06833333333333333
+   },
+   "c08_preregistered": {
+    "b1": {
+     "bad": 41,
+     "posts": 189,
+     "rate": 0.21693121693121692
+    },
+    "ci_high": 0.27977268806073147,
+    "ci_low": 0.1601786820904772,
+    "flow": {
+     "bad": 0,
+     "posts": 147,
+     "rate": 0.0
+    },
+    "passed": true,
+    "value": 0.21693121693121692
+   }
+  },
+  "c08_preregistered": {
+   "b1": {
+    "bad": 46,
+    "posts": 197,
+    "rate": 0.233502538071066
+   },
+   "ci_high": 0.2977557972746832,
+   "ci_low": 0.17459706959706958,
+   "flow": {
+    "bad": 0,
+    "posts": 147,
+    "rate": 0.0
+   },
+   "passed": true,
+   "value": 0.233502538071066
+  },
+  "config_sha256": "114913c99b42d6f5a6b7a6e14eaa082f82b23d8c2452f357140475bca8978993",
+  "decisions": [
+   "D59",
+   "D60"
+  ],
+  "invoices": 600,
+  "seal_sha256": "51884acb8d84d0dfe1651323d04b3e2e1477af99cb1b96f4fda480d1ccff2ce2",
+  "sealed": false,
+  "synthetic": true
+ },
  "source": "warehouse",
  "synthetic": true,
  "validation": {
