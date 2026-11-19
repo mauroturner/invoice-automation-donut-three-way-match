@@ -27,12 +27,9 @@ REQUIREMENT_NAME = re.compile(r"\s*([A-Za-z0-9][A-Za-z0-9._-]*)")
 REQUIREMENT_FILES = ("requirements.txt", "requirements-ml.txt", "requirements-dev.txt")
 # The direct pins the landing declares itself (S5): everything else a direct pin needs has a row in LANDING-EXPANSION.md
 LANDING_DECLARED = {"pandas", "fastapi"}
-# Direct pins with no row in LANDING-EXPANSION.md yet: the rows that add project 07 are U23's (plan section 27, decision D34), written with the
-# other documents. U23 writes them and empties this set; until then the test says exactly which rows are owed, and fails if one is not.
-PENDING_LANDING_ROWS = frozenset({
-    "pillow", "qrcode", "pyzbar", "opencv-python-headless", "pypdf",
-    "torch", "transformers", "tokenizers", "sentencepiece", "huggingface-hub", "safetensors", "zss",
-})
+# Direct pins with no row in LANDING-EXPANSION.md yet: none. U01 left twelve owed (pillow, qrcode, pyzbar, opencv-python-headless, pypdf, torch, transformers, tokenizers,
+# sentencepiece, huggingface-hub, safetensors and zss) and U23 wrote their nine rows (plan section 27, decision D34); a new direct pin without its row fails the test.
+PENDING_LANDING_ROWS = frozenset()
 # research/s06_erp_survey.py imports truststore inside try/except ImportError, as an optional nicety of the survey: not a requirement
 OPTIONAL_RESEARCH_IMPORTS = {"truststore"}
 

@@ -346,7 +346,7 @@ Estados: **vigente**, **pendiente del dueño**, **reemplazada por Dxx**.
 - **Motivo**: el checkpoint publicado es de PyTorch; reimplementarlo en TensorFlow sería otro proyecto.
 - **Afecta**: `requirements*.txt`; RNF09; AC38; `LANDING-EXPANSION.md`.
 - **Quién**: agente de planificación.
-- **Estado**: vigente; sumar al landing, pendiente del dueño.
+- **Estado**: vigente; sumar al landing, pendiente del dueño. **Nota del 2026-11-18 (U23)**: las nueve filas están en `LANDING-EXPANSION.md` (PyTorch, Transformers con tokenizers, sentencepiece y huggingface-hub, safetensors, Pillow, qrcode, pyzbar con ZBar, OpenCV, zss y pypdf) y el 07 se sumó a las de NumPy, SQLite, pyarrow, matplotlib, pytest, PostgreSQL, pydantic, uvicorn y httpx; `PENDING_LANDING_ROWS` quedó vacío y una dependencia directa nueva sin su fila hace fallar `test_every_direct_import_is_a_pinned_requirement_and_documented`. Sumarlas al landing sigue siendo del dueño.
 
 ## D35 Entorno y versiones: tres archivos de requisitos y torch desde el índice de PyTorch
 
