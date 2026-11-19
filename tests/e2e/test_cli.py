@@ -17,7 +17,7 @@ import pytest
 
 from invoiceflow import cli as cli_module
 from invoiceflow import pipeline
-from invoiceflow.config import FINGERPRINT_KEYS, INFORMATIVE_KEYS, UNSEALED_KEYS
+from invoiceflow.config import ENV_CONFIG, ENV_HOME, FINGERPRINT_KEYS, INFORMATIVE_KEYS, UNSEALED_KEYS
 from invoiceflow.registry import config_fingerprint
 from tests.e2e.cli_helpers import PROJECT_ROOT, cli, config_of
 from tests.fixtures.pipeline_state import copy_state, fresh_project
@@ -49,8 +49,12 @@ def documented_options() -> set[str]:
 
 
 def case_config(state, tmp_path):
-    """--config: the same command over the folder it points at and over the default one gives other results."""
-    with_it, without = cli("figures", "--config", config_of(state)), cli("figures")
+    """--config: the same command over the folder it points at and over the default one gives other results. The default one is a clean quick clone of its own: once the real run has written the real
+    outputs of the project folder, ``figures`` over the project's own defaults would succeed too, and would write the real figures (U22)."""
+    default = fresh_project(tmp_path / "default")
+    with mock.patch.dict(os.environ, {ENV_HOME: str(default.root), ENV_CONFIG: config_of(default)}):
+        without = cli("figures")
+    with_it = cli("figures", "--config", config_of(state))
     assert with_it.code != without.code or with_it.out != without.out
 
 
