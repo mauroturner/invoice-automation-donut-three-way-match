@@ -370,3 +370,22 @@ def test_a_poor_scan_flips_one_pixel_in_two_hundred_and_a_mild_one_flips_none():
     assert 0.003 < dark < 0.008, dark
     mild, _ = scan(white, "mild", random.Random(3))
     assert (np.asarray(mild) < 128).sum() == 0
+
+
+def test_the_qr_of_a_text_is_encoded_once_and_a_page_is_the_same_byte_for_byte_with_it_kept_or_not(quick_view, quick_train, monkeypatch):
+    """The suite renders the same invoices many times (the session's worlds, the rebuild of R11): the QR matrix of a text is a pure function of the text, so it is encoded once and kept, and
+    a page drawn with the matrix kept is the page drawn after forgetting it (A2 of the evaluation, D63)."""
+    import qrcode
+
+    from invoiceflow.synth import layouts
+
+    made = []
+    real = qrcode.QRCode.make
+    monkeypatch.setattr(qrcode.QRCode, "make", lambda self, *a, **k: (made.append(1), real(self, *a, **k))[1])
+    truth = next(t for t in quick_train if t.qr_text is not None)
+    layouts.qr_matrix.cache_clear()
+    first = render(truth, quick_view)
+    second = render(truth, quick_view)
+    assert first == second and len(made) == 1, "the second page reuses the matrix"
+    layouts.qr_matrix.cache_clear()
+    assert render(truth, quick_view) == first and len(made) == 2

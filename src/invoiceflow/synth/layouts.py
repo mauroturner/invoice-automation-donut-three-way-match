@@ -79,15 +79,23 @@ class Canvas:
     def paste_qr(self, text: str, x: float, y_bottom: float, centimetres: float) -> None:
         """The QR of `text` printed `centimetres` wide (its quiet zone included) with its left edge at x and its bottom edge at y_bottom."""
         side = max(21, round(centimetres / CM_PER_INCH * self.dpi))
-        code = qrcode.QRCode(error_correction=qrcode.constants.ERROR_CORRECT_M, box_size=1, border=4)
-        code.add_data(text)
-        code.make(fit=True)
-        picture = code.make_image(fill_color="black", back_color="white").convert("L").resize((side, side), Image.NEAREST)
+        picture = qr_matrix(text).resize((side, side), Image.NEAREST)
         self.image.paste(picture, (self.px(x), self.px(y_bottom) - side))
 
     def qr_top(self, centimetres: float) -> float:
         """The top of a QR of that width whose bottom edge is at the base bottom margin, in base units."""
         return BASE_HEIGHT - 90 - centimetres / CM_PER_INCH * 150
+
+
+@lru_cache(maxsize=8192)
+def qr_matrix(text: str) -> Image.Image:
+    """The QR of `text` with one pixel per module and its quiet zone (error correction M, the smallest version that holds it), in grey levels. A pure function of the text, so it is encoded
+    once per process and kept: encoding (choosing the mask) is most of what drawing a page costs, and the suite draws the same invoices many times (D63). Callers resize a copy; the kept
+    image is never changed."""
+    code = qrcode.QRCode(error_correction=qrcode.constants.ERROR_CORRECT_M, box_size=1, border=4)
+    code.add_data(text)
+    code.make(fit=True)
+    return code.make_image(fill_color="black", back_color="white").convert("L")
 
 
 @dataclass(frozen=True)
