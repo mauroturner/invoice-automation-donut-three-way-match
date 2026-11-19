@@ -392,8 +392,10 @@ Hecho. Los criterios de la prueba y su veredicto. Se versiona en `outputs/powerb
 | `seen_by_research` | texto | — | Si la investigación lo vio antes. |
 | `seen_by_planner` | texto | — | Si el plan lo vio antes. |
 | `synthetic` | verdadero/falso | — | La cifra sale de las facturas sintéticas. |
-| `verdict_es` | texto | — | Veredicto, en español. |
+| `verdict_es` | texto | — | Veredicto publicado, en español: el que cuenta el resumen (el de C08, por factura). |
 | `seal_state` | texto | — | sealed (la configuración sellada) o post_seal (otra, posterior al sello). |
+| `sealed_verdict_es` | texto | — | Veredicto tal como lo selló la prueba; igual al publicado salvo en C08. |
+| `threshold_figure_es` | texto | — | Lo que prueba el umbral, en español: la cifra que se compara con él (el límite del intervalo en C01, C05 y C08). |
 
 ### `fact_validation`
 

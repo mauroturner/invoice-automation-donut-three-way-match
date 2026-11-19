@@ -181,7 +181,9 @@ FACT_EVALUATION_SUMMARY = Table("fact_evaluation_summary", "fact", ("criterion_i
     _c("criterion_id", "string", "Criterio, de C01 a C10."), _c("name_es", "string", "Nombre del criterio."), _c("value", "float64", "Valor medido."), _c("baseline_value", "float64", "Valor de la base con que se compara."),
     _c("ci_low", "float64", "Límite inferior del intervalo."), _c("ci_high", "float64", "Límite superior del intervalo."), _c("threshold_es", "string", "Umbral, en español."),
     _c("passed", "bool", "Cumple; vacío en el informativo."), _c("seen_by_research", "string", "Si la investigación lo vio antes."), _c("seen_by_planner", "string", "Si el plan lo vio antes."),
-    _c("synthetic", "bool", "La cifra sale de las facturas sintéticas."), _c("verdict_es", "string", "Veredicto, en español."), SEAL_STATE,
+    _c("synthetic", "bool", "La cifra sale de las facturas sintéticas."), _c("verdict_es", "string", "Veredicto publicado, en español: el que cuenta el resumen (el de C08, por factura)."), SEAL_STATE,
+    _c("sealed_verdict_es", "string", "Veredicto tal como lo selló la prueba; igual al publicado salvo en C08."),
+    _c("threshold_figure_es", "string", "Lo que prueba el umbral, en español: la cifra que se compara con él (el límite del intervalo en C01, C05 y C08)."),
 ), "Los criterios de la prueba y su veredicto.")
 FACT_VALIDATION = Table("fact_validation", "fact", ("run_key", "rule_id"), (
     RUN_KEY, _c("rule_id", "string", "Regla de validación."), _c("name_es", "string", "Nombre de la regla."), _c("severity", "string", "bloqueante, advertencia o informativa."),
@@ -272,7 +274,7 @@ PAGES: tuple[Page, ...] = (
         Visual("table", "TED de CORD del elegido y del checkpoint" + NOT_FILTERED.format(plural="n", names="la cohorte ni el perfil de escaneo"), ("dim_model[model_key]", "[TED de CORD]"), 6, 5, 6, 4),
     )),
     Page("La prueba", (
-        Visual("table", "Criterios C01-C10", ("fact_evaluation_summary[criterion_id]", "fact_evaluation_summary[name_es]", "fact_evaluation_summary[value]", "fact_evaluation_summary[threshold_es]",
+        Visual("table", "Criterios C01-C10", ("fact_evaluation_summary[criterion_id]", "fact_evaluation_summary[name_es]", "fact_evaluation_summary[threshold_figure_es]", "fact_evaluation_summary[threshold_es]",
                                               "fact_evaluation_summary[seen_by_research]", "fact_evaluation_summary[seen_by_planner]", "[Veredicto]"), 0, 0, 12, 4),
         Visual("barChart", "Carga mala del flujo frente a B0-B3", ("dim_baseline[label_es]", "dim_cohort[label_es]", "[Carga mala de la línea base]"), 0, 4, 6, 5),
         Visual("table", "La elección de la época en la validación", ("fact_choice[epoch]", "fact_choice[cord_val_ted]", "fact_choice[val_known_line_exact]", "fact_choice[val_new_line_exact]",

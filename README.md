@@ -236,7 +236,7 @@ $env:PYTHONPATH = "src"
 .venv\Scripts\python research\s08_arca_docs.py
 ```
 
-**2. Pruebas** (sin las que necesitan CORD, la GPU, Docker o ERPNext). La suite por defecto recoge 1.288 pruebas y termina en menos de 180 s en el equipo de desarrollo (ver la ficha del modelo, que dice en qué commit se midieron los tiempos):
+**2. Pruebas** (sin las que necesitan CORD, la GPU, Docker o ERPNext). La suite por defecto recoge 1.290 pruebas y termina en menos de 180 s en el equipo de desarrollo (ver la ficha del modelo, que dice en qué commit se midieron los tiempos):
 
 ```powershell
 .venv\Scripts\python -m pytest

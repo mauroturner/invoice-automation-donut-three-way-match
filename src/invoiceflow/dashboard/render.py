@@ -274,9 +274,9 @@ def _criteria(data: _Data) -> str:
     summary = data.sealed("fact_evaluation_summary").sort_values("criterion_id")
     if summary.empty:
         return _note("La prueba se evalúa con el cierre: los criterios quedan pendientes hasta entonces.")
-    rows = [[r.criterion_id, r.name_es, _fmt(r.value), r.threshold_es, r.seen_by_research, r.seen_by_planner, "informativo" if _missing(r.passed) else ("sí" if r.passed else "no"), r.verdict_es]
+    rows = [[r.criterion_id, r.name_es, r.threshold_figure_es, r.threshold_es, r.seen_by_research, r.seen_by_planner, "informativo" if _missing(r.passed) else ("sí" if r.passed else "no"), r.verdict_es]
             for r in summary.itertuples()]
-    return _table_html(["Criterio", "Nombre", "Valor", "Umbral", "Investigación", "Plan", "Cumple", "Veredicto"], rows, {2})
+    return _table_html(["Criterio", "Nombre", "Lo que prueba el umbral", "Umbral", "Investigación", "Plan", "Cumple", "Veredicto"], rows)
 
 
 def _baseline_bars(data: _Data, v: Visual) -> str:

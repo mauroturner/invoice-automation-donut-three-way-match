@@ -13,7 +13,7 @@ from pathlib import Path
 import pyarrow.parquet as pq
 import pytest
 
-from invoiceflow import warehouse
+from invoiceflow import reporting, texts, warehouse
 from invoiceflow.dashboard.semantic_model import ARROW_TYPES, MODEL, Relationship, arrow_schema, validate_model
 from invoiceflow.export import STAR_MANIFEST, export_star_schema, verify_star_schema
 from invoiceflow.registry import RunMeta
@@ -155,6 +155,22 @@ def test_the_evaluation_facts_say_which_seal_they_are_under_and_the_rest_is_the_
     assert set(baseline["cohort_key"]) == {"test_known", "test_new"} and {"flow", "b0", "b1", "b3"} <= set(baseline["baseline_key"])
     dim_model = read(star_export.out, "dim_model").to_pandas()
     assert set(dim_model["seal_state"]) == {"sealed"} and dim_model.set_index("model_key").loc["chosen", "chosen_epoch"] == 2
+
+
+def test_the_evaluation_fact_tells_every_criterion_as_the_published_summary_does(star_export):
+    """N2 of the recheck (B1, A1): the Parquet file the DAX measure «Veredicto» reads carries the published sentence of each criterion (C08 per invoice), the sealed one beside it as
+    ``sealed_verdict_es`` and the figure the threshold tests as ``threshold_figure_es``: the same texts as the summary, never a second copy of them."""
+    published = {c["criterion_id"]: c for c in reporting.build_summary(star_export.conn, star_export.view, seal_path=star_export.state.seal)["criteria"]}
+    facts = read(star_export.out, "fact_evaluation_summary").to_pandas().set_index("criterion_id")
+    assert list(facts.index) == list(published) == [f"C{n:02d}" for n in range(1, 11)] and set(facts["seal_state"]) == {"sealed"}
+    for cid, criterion in published.items():
+        row = facts.loc[cid]
+        assert row["verdict_es"] == criterion["verdict_es"], cid
+        assert row["sealed_verdict_es"] == criterion.get("sealed_verdict_es", criterion["verdict_es"]), cid
+        assert row["threshold_figure_es"] == texts.threshold_figure(criterion), cid
+    c08 = facts.loc["C08"]
+    assert c08["verdict_es"] != c08["sealed_verdict_es"] and "por factura" in c08["verdict_es"] and "Es la cifra sellada" in c08["verdict_es"] and "por factura" not in c08["sealed_verdict_es"]
+    assert "puntos (límite inferior, por factura)" in c08["threshold_figure_es"] and facts.loc["C10", "threshold_figure_es"] == "sin umbral"
 
 
 def test_a_control_with_rows_undoes_the_whole_rebuild_and_the_marts_keep_what_they_had(star_export, tmp_path):

@@ -67,6 +67,21 @@ def test_the_previews_are_the_figures_of_the_exported_files(star_export, rendere
     assert "La prueba se evalúa" not in html
 
 
+def test_the_criteria_preview_shows_what_the_threshold_tests_and_the_published_verdict_not_a_value_column(star_export, rendered_html):
+    """N2 of the recheck (A1, B1): the preview of «Criterios C01-C10» has «Lo que prueba el umbral» where the old «Valor» column was, with the figure the threshold tests (C08's per invoice),
+    and C08's verdict is the published sentence, never the sealed one that mixes the per-invoice and the per-auto-post rates."""
+    from html import escape
+
+    html = rendered_html.html
+    table = html[html.index("<th>Criterio</th>"):]
+    table = table[:table.index("</table>")]
+    assert "<th>Lo que prueba el umbral</th>" in table and "<th class=num>Valor</th>" not in table and "<th>Valor</th>" not in table
+    criteria = pd.read_parquet(star_export.out / "fact_evaluation_summary.parquet").set_index("criterion_id")
+    row = next(r for r in re.findall(r"<tr>.*?</tr>", table) if "<td>C08</td>" in r)
+    assert escape(criteria.loc["C08", "threshold_figure_es"]) in row and escape(criteria.loc["C08", "verdict_es"]) in row and "por factura" in row
+    assert criteria.loc["C08", "sealed_verdict_es"] not in html.replace("&amp;", "&")
+
+
 def test_without_the_exported_files_every_preview_says_there_is_no_data_and_the_criteria_are_pending(star_export, tmp_path):
     out = render_design(MODEL, tmp_path / "nothing", tmp_path / "empty.html", RunMeta("run-x", star_export.run.as_of)).read_text(encoding="utf-8")
     assert "Sin datos" in out and "pendientes" in out and out.count('class="visual"') == sum(len(p.visuals) for p in PAGES) and "<script" not in out

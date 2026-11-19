@@ -131,8 +131,8 @@ def read_post_seal_analysis(seal_path: Path) -> dict[str, Any] | None:
 # --- the summary ------------------------------------------------------------------------------------------------------------------------
 
 
-def _rows(conn: sqlite3.Connection) -> list[dict[str, Any]]:
-    cursor = conn.execute(f"SELECT {', '.join(CRITERION_COLUMNS)} FROM eval_criteria WHERE seal_state = 'sealed' ORDER BY criterion_id")
+def _rows(conn: sqlite3.Connection, state: str = "sealed") -> list[dict[str, Any]]:
+    cursor = conn.execute(f"SELECT {', '.join(CRITERION_COLUMNS)} FROM eval_criteria WHERE seal_state = ? ORDER BY criterion_id", (state,))
     return [{**dict(zip(CRITERION_COLUMNS, row, strict=True)), "passed": None if row[7] is None else bool(row[7]), "synthetic": bool(row[10])} for row in cursor]
 
 
@@ -172,6 +172,22 @@ def _published(criterion: dict[str, Any], metrics: Mapping[str, Any]) -> dict[st
     verdict = texts.c08_per_invoice_verdict(bool(criterion["passed"]), b1_bad=baselines["b1:all"]["bad_post"], flow_bad=baselines["flow:all"]["bad_post"],
                                             invoices=metrics["bad_post"]["invoices"], value=versus["value"], low=versus["ci_low"], high=versus["ci_high"])
     return {**criterion, "verdict_es": verdict, "sealed_verdict_es": criterion["verdict_es"]}
+
+
+def criteria_texts(conn: sqlite3.Connection, *, seal_path: Path) -> dict[tuple[str, str], dict[str, str]]:
+    """What the star model's evaluation fact tells for every row of ``eval_criteria``, keyed by ``(criterion_id, seal_state)`` (N2 of the recheck): the sentence the summary publishes
+    (``verdict_es``), the sealed one beside it (``sealed_verdict_es``, the same when the published sentence is the sealed one) and the figure the threshold tests (``threshold_figure_es``).
+    A sealed row is told as ``build_summary`` tells it (``_published`` over the seal's metrics); a row of another state is told as it is."""
+    document = read_seal(seal_path)
+    test = (document or {}).get("test")
+    metrics = test["metrics"] if test else None
+    texts_by_row: dict[tuple[str, str], dict[str, str]] = {}
+    for state in [r[0] for r in conn.execute("SELECT DISTINCT seal_state FROM eval_criteria ORDER BY seal_state")]:
+        for criterion in _rows(conn, state):
+            published = _published(criterion, metrics) if state == "sealed" and metrics else criterion
+            texts_by_row[(criterion["criterion_id"], state)] = {"verdict_es": published["verdict_es"], "sealed_verdict_es": published.get("sealed_verdict_es", criterion["verdict_es"]),
+                                                                "threshold_figure_es": texts.threshold_figure(published)}
+    return texts_by_row
 
 
 def pending_criteria(view: SealedConfig) -> list[dict[str, Any]]:
@@ -242,5 +258,5 @@ def replace_block(text: str, name: str, start: str, end: str, content: str) -> s
     return text[: first + len(start)] + "\n" + content.strip("\n") + "\n" + text[last:]
 
 
-__all__ = ["CORD_PREDICTIONS_FILE", "POST_SEAL_FILE", "RESULTS_END", "RESULTS_START", "build_summary", "close_day", "evaluate", "pending_criteria", "post_seal_path", "read_post_seal_analysis", "replace_block",
+__all__ = ["CORD_PREDICTIONS_FILE", "POST_SEAL_FILE", "RESULTS_END", "RESULTS_START", "build_summary", "close_day", "criteria_texts", "evaluate", "pending_criteria", "post_seal_path", "read_post_seal_analysis", "replace_block",
            "store_result", "summary_markdown", "write_cord_predictions", "write_post_seal_analysis", "write_summary"]

@@ -1,7 +1,7 @@
 """The star model for Power BI: the marts in SQLite and one Parquet file per table (RF21, AC26; D37; plan, section 19). Adapted from project 06's ``export.py``.
 
 ``build_powerbi_marts`` loads the reference tables that come from the code, the registry, the seal and the master (``ref_*``: the labels in Spanish, the suppliers, the calendar, the two models and
-the candidate epochs), rebuilds the tables of ``sql/marts/powerbi`` (``star_<name>``) and runs the controls of ``sql/checks/model``, all in one transaction: a control with rows undoes it. Everything
+the candidate epochs, and the texts the summary publishes for each criterion, from ``reporting.criteria_texts``: never a second copy of those sentences), rebuilds the tables of ``sql/marts/powerbi`` (``star_<name>``) and runs the controls of ``sql/checks/model``, all in one transaction: a control with rows undoes it. Everything
 is **as of the run's instant**: a day that had not closed is not in the marts.
 
 ``export_star_schema`` writes every table of the semantic model with its Arrow schema and the run, the instant, the artifact, the synthetic mark and the attribution as file metadata, to the
@@ -27,6 +27,7 @@ from invoiceflow import labels
 from invoiceflow.dashboard.semantic_model import SemanticModel, Table, arrow_schema, validate_model
 from invoiceflow.files import write_atomic
 from invoiceflow.registry import MODEL_VERSION, RunMeta, read_registry, read_seal
+from invoiceflow.reporting import criteria_texts
 from invoiceflow.synth.invoices import FIRST_REASON, PLANTED_CLASSES
 from invoiceflow.synth.master import master as make_master
 from invoiceflow.warehouse import SQL_DIR, _fail_on, apply_schema, rebuild_marts, run_checks, run_sql_file
@@ -102,6 +103,8 @@ def _load_references(conn: sqlite3.Connection, view: Any, seal_path: Path, as_of
     _replace(conn, "ref_model", "model_key TEXT PRIMARY KEY, model_version TEXT, chosen_epoch INTEGER, artifact_sha256 TEXT, config_sha256 TEXT, fit_splits TEXT", models)
     _replace(conn, "ref_choice", "epoch INTEGER PRIMARY KEY, cord_val_ted REAL, val_known_line_exact REAL, val_new_line_exact REAL, kept INTEGER, chosen INTEGER, fit_splits TEXT", candidates)
     _replace(conn, "ref_seal", "launch_state TEXT", [(_launch_seal_state(registered, seal_path),)])
+    published = [(cid, state, t["verdict_es"], t["sealed_verdict_es"], t["threshold_figure_es"]) for (cid, state), t in sorted(criteria_texts(conn, seal_path=seal_path).items())]
+    _replace(conn, "ref_criterion_text", "criterion_id TEXT, seal_state TEXT, verdict_es TEXT, sealed_verdict_es TEXT, threshold_figure_es TEXT, PRIMARY KEY (criterion_id, seal_state)", published)
 
 
 def build_powerbi_marts(conn: sqlite3.Connection, run: RunMeta, view: Any, *, seal_path: Path) -> None:
