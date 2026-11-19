@@ -1,6 +1,6 @@
 # Evaluación final independiente
 
-Qué se evaluó, quién lo evaluó, qué encontró y cómo se resolvió cada hallazgo. Es el control que el proyecto dejó para el final (plan, sección 28): lo hizo un agente que no escribió el código, sobre una copia aparte del commit `832271f` (la documentación de U23; el registro lo cuenta en L112), y sus cuatro bloqueantes y sus once advertencias se corrigieron o se dejaron dichos después (la sección «Las correcciones»). La comprobación de las correcciones (plan, sección 28, ítem 3) la hace otro agente, y su resultado se escribe en la sección «Comprobación». Lo que dice este documento de quién hizo qué, con qué modelo y en qué orden, es lo que consta en el registro del documento de seguimiento (`odd/tasks/portfolio-projects.md`).
+Qué se evaluó, quién lo evaluó, qué encontró y cómo se resolvió cada hallazgo. Es el control que el proyecto dejó para el final (plan, sección 28): lo hizo un agente que no escribió el código, sobre una copia aparte del commit `832271f` (la documentación de U23; el registro lo cuenta en L112), y sus cuatro bloqueantes y sus once advertencias se corrigieron o se dejaron dichos después (la sección «Las correcciones»). La comprobación de las correcciones (plan, sección 28, ítem 3) la hizo otro agente, y su resultado está en la sección «Comprobación»; lo que se hizo con sus hallazgos está en «La segunda corrección». Lo que dice este documento de quién hizo qué, con qué modelo y en qué orden, es lo que consta en el registro del documento de seguimiento (`odd/tasks/portfolio-projects.md`).
 
 ## Quién evaluó y cómo
 
@@ -106,14 +106,129 @@ Las escribió un agente con Opus (plan, sección 28, ítem 2), cada una con la p
 
 **Lo que cambió en las salidas versionadas, y lo que no.** Se regeneraron sobre una copia del estado de la corrida sellada (el almacén, `data/interim/` y las entregas copiados a otra carpeta temporal), con las tareas `export` y `render_dashboard` y los pasos del `report` del cierre sellado, salvo los dos que reescriben su fila y el manifiesto de entregas; los dos archivos nuevos de `reports/` salen del cierre de la reconstrucción, atados a los mismos bytes del sello. Comparado con `832271f`: `reports/model_seal.json` es el mismo; se agregan `reports/post_seal_analysis.json` y `reports/cord_test_predictions.json`; `evaluation_summary.json` y `summary.json` del sitio agregan `post_seal_analysis` y, en C08, `sealed_verdict_es`, con `verdict_es` diciendo lo sellado por factura; `evaluation_summary.md` cambia la columna «Valor» por «Lo que prueba el umbral», la frase de C08 y agrega los análisis posteriores al sello (y el bloque del README, que `docs-sync` copia); `dim_pipeline_run` agrega la corrida sin entrega que siguió al replay sellado; los manifiestos cambian por eso. Los otros 19 Parquet, los otros cuatro archivos del sitio, el diseño del tablero y las figuras son los mismos byte a byte.
 
-**La suite** por defecto, con el código del último commit y en reposo: 118,16 s y 119,17 s en dos corridas seguidas en reposo con el código de `30f622e` (presupuesto 120 s, límite 180 s), contra los 126,06 s y 120,13 s que midió la evaluación; recoge 1.288 (las correcciones le sumaron catorce).
+**La suite** por defecto, con el código del último commit y en reposo: 118,16 s y 119,17 s en dos corridas seguidas en reposo con el código de `30f622e` (presupuesto 120 s, límite 180 s), contra los 126,06 s y 120,13 s que midió la evaluación; recoge 1.288 (las correcciones le sumaron catorce). La comprobación midió 121,67 s y 118,72 s con `8816a14`, y la segunda corrección, que suma seis pruebas (recoge 1.294), 124,61 s y 124,44 s (N5).
 
 **El diferencial de la línea de comandos** contra `832271f`, en el modo rápido, en dos copias hechas con `git archive` (la de `832271f` y la del último commit de código, `30f622e`), con los mismos 18 casos en el mismo orden (las ayudas, `make-fixture`, cuatro rechazos, `replay --until` del lanzamiento, el `replay` completo, `replay` y `run` sin nada pendiente, `figures`, `replay --until` de una entrega ya cargada y `replay` con el almacén y `data/quick/interim` movidos): la salida, los errores y el código de salida son los mismos, con las horas y los segundos quitados, salvo donde se pidió. El último caso salía con 0 diciendo «no hay entregas pendientes» y ahora sale con 2 nombrando el manifiesto de entregas y R11 (B3). Lo que el `replay` completo deja escrito, sin las claves, las horas y los segundos de las corridas, es lo mismo en los 20 Parquet, en `algorithms.json`, `data.json`, `operation.json`, `validation_rules.json` y en el sello; cambian `summary.json` y `evaluation_summary.json` (`post_seal_analysis` y la frase de C08, con la sellada en `sealed_verdict_es`), `evaluation_summary.md` (13 renglones: la columna, la frase de C08 y los análisis posteriores al sello) y se agregan `post_seal_analysis.json` y `cord_test_predictions.json` (B1, B2 y A10). `POST /runs` con la lectura después de la corrida fallida responde 200 en lugar de 503 (A4); la respuesta de una corrida cuyos números se leyeron no cambia (`tests/integration/test_api.py`).
 
 ## Comprobación
 
-La hace otro agente con Opus, en copias del commit evaluado y del corregido (plan, sección 28, ítem 3). Lo que encuentre se escribe aquí.
+La hizo un agente con Opus que no escribió las correcciones (plan, sección 28, ítem 3; el registro la cuenta en L115), en solo lectura sobre el repositorio, con dos clones hechos con `git clone --no-hardlinks`: `old` en `832271f` (el commit evaluado) y `new` en `8816a14` (el de las correcciones). Lo que sigue es su informe, en el orden del informe de la evaluación, y lo que se hizo con cada hallazgo está en «La segunda corrección».
+
+**Entorno y lectores**
+
+- Cada clon tenía su `.venv` con Python 3.11.1; torch 2.14.1+cu130 se instaló con `--no-deps` desde el índice de CUDA, como dice el README, y después `requirements-dev.txt`. `pip check` sale con 0 y `torch.cuda.is_available()` da verdadero. En `new`, el primer `pip install -r` falló una vez por un error pasajero del índice de PyPI con `qrcode`, y el segundo intento pasó.
+- `data/` se copió una vez desde la carpeta original (706 archivos con los mismos SHA-256) y de esa copia a cada clon y a cada copia. Las sondas que escriben corrieron en copias hechas con `git archive` más los datos. «Nada escrito» quiere decir que el SHA-256 de toda la copia es igual antes y después (con los nombres de carpetas, sin `__pycache__`; los Parquet de CORD entran por tamaño y fecha de modificación).
+- No reutilizó ningún lector del evaluador. `b1_own.py` y `ted_own.py` recalculan las cifras y no importan `invoiceflow`; `wh_compare.py`, `outputs_check.py`, `cli_diff.py`, `api_diff.py`, `hashtree.py` y `scan_ctrl.py` son las comparaciones y los diferenciales; `batch_proof.py` usa a propósito el extractor del proyecto, porque es lo que se compara; `test_probe_launch.py` usa los auxiliares de `tests/integration/test_launch.py`.
+- Docker quedó como estaba (contenedores, volúmenes, redes e imágenes iguales antes y después). El repositorio original quedó limpio y su `data/` con los mismos 706 hashes.
+
+**B1. C08 por factura frente a C08 preregistrado: corregida en lo que el informe listaba, abierta en el tablero (N2)**
+
+- El sello no se tocó: `reports/model_seal.json` es igual byte a byte en los dos commits (SHA-256 `51884acb8d84d0dfe1651323d04b3e2e1477af99cb1b96f4fda480d1ccff2ce2`).
+- `post_seal_analysis.json` tiene `seal_sha256` igual al del sello y `config_sha256` `114913c9…8993`. Si se cambia un byte de una copia del sello, `read_post_seal_analysis` devuelve `None`: el archivo está atado a los bytes del sello.
+- Recálculo propio (`b1_own.py`, sin `invoiceflow`), con las órdenes del maestro leídas del ERP sustituto, el QR y la orden leídos del almacén y la verdad de `data/interim/truth`: B1 sellada (la orden de la verdad, con número leído) 197 cargas y 46 malas (180 y 29 en `test_known`, 17 y 17 en `test_new`); C08 preregistrado 0,233503 [0,174597; 0,297756] (sintético), igual al archivo; C08 por factura 0,076667 [0,056667; 0,1] (sintético), igual al sello.
+- Las frases publicadas en el resumen, el README, la ficha, `outputs/site/summary.json` y las filas 07 de `SITE-UPDATES.md` ya no mezclan las dos cantidades; la frase sellada queda solo como `sealed_verdict_es`. La columna «Lo que prueba el umbral» (A1) muestra −6,56, 0,025 y 5,7.
+- Lo que faltaba: el diseño del tablero y la tabla de Power BI seguían publicando la frase mezclada (N2).
+
+**B2. B1 con la orden que leyó el modelo: corregida**
+
+- Recálculo propio: 189 cargas y 41 malas (175 y 27, 14 y 14). Wilson: 0,16413 a 0,28102. Por factura: 0,068333 [0,05; 0,09] (sintético). Por carga: 0,216931 [0,160179; 0,279773] (sintético). Todo es igual a `b1_read_order` del archivo, también el paso directo de 0,3418 y el recuerdo de revisión de 0,9581.
+- Se publica al lado de la B1 sellada en el README, la ficha (6,83, de 5,00 a 9,00, y 21,69, de 16,02 a 27,98) y `SITE-UPDATES.md`.
+
+**B3. R11: corregida en el código; el paso 1 del runbook estaba roto (N1)**
+
+- En `832271f` (copia `r11old`, moviendo solo `data\warehouse` y `data\interim`, como decía R11): `replay` sale con 0 en 2 s con «no hay entregas pendientes»; se reproduce el problema original.
+- En `8816a14`, siguiendo R11 al pie de la letra con los datos reales, en `r11new`:
+  - Movidos solo el almacén y `interim`: `replay` y `run` salen con 2, nombran R11 y no escriben nada (hash igual).
+  - Movidas además las entregas, con el ERP en su lugar: salen con 2, con «el ERP sustituto ya tiene 10793 documentos… R11», y no escriben nada.
+  - Movidos los cuatro: `replay` sale con 0 en 1.613 s (26 min 53 s). El lanzamiento hace `mode=adopt, seal=match` en 0,8 s (69 s la corrida); las 20 diarias tardan de 50 a 59 s; el cierre tarda 421 s, con `evaluate` en 416,3 s, `state=repeat` y `seal=unchanged`. El sello sigue igual antes y después.
+- El almacén reconstruido frente al sellado:
+  - Iguales fila por fila: las seis tablas `eval_*`, `decisions` sin la clave y los segundos, `decision_reasons`, `extracted_fields` sin los segundos, `invoices`, todas las `ref_*` y `star_*` de la evaluación, y `model_registry` entero (incluido `trained_as_of`).
+  - Diferencias esperadas: la corrida del lanzamiento registra M02 y M03 en lugar de M04 a M06 (`validation_results` 220 frente a 221), y `pipeline_runs` tiene 22 frente a 23 filas.
+- Los archivos del cierre (`post_seal_analysis.json`, `cord_test_predictions.json`, `evaluation_summary.json` y `evaluation_summary.md`) reconstruidos son byte a byte los versionados.
+- El texto de R11 tenía caracteres de control (N1).
+
+**B4. El cierre: corregida**
+
+- El cierre real con el código corregido tardó 421 s contra 600 s; el pico de `PeakWorkingSetSize` fue de 2.831,2 MB y el de `torch.cuda.max_memory_allocated` de 6.789,5 MB.
+- Los árboles del checkpoint (`batch_proof.py`): las 600 páginas dan 600 de 600 árboles idénticos de a una página (`extract`) y de a ocho (`pipeline.checkpoint_trees`); una página da `{}` en las dos formas. De a ocho: 273,3 s, con la carga de CPU de sus diferenciales al mismo tiempo, y un pico de `torch.cuda.max_memory_allocated` de 6.019,7 MB, igual a D61. De a una: 876,5 s y un pico de `PeakWorkingSetSize` de 1.458,7 MB.
+- Invariantes: el sello sigue con `51884acb…` y todas las filas `eval_*` coinciden. `-m real_data` sobre la copia reconstruida, después de un `run` (que termina `no_delivery`): 7 pasan.
+
+**Las advertencias**
+
+- **A1, A3, A4, A5, A7, A10 y A11: corregidas.**
+  - A3: siguió el README con `--no-deps` en los dos commits y `pip check` sale con 0.
+  - A4: forzó la lectura posterior a la corrida a fallar (`_run_row` lanza `sqlite3.OperationalError`); en los dos commits la corrida quedó guardada. En `832271f` la respuesta es 503 `warehouse_unavailable`; en `8816a14` es 200, con `run_key`, `status` y `delivery_id`, y los números en `null`, y `GET /runs/<clave>` después da los números. Un cliente que reintenta igual corre la entrega siguiente en los dos commits: lo que cambió es que ya no recibe un error que lo invite a reintentar.
+  - A5 (sondas 1 y 4 de `test_probe_launch.py`): si el sello falla, no queda fila, ni artefacto, ni sello, y un relanzamiento real escribe el sello y la fila; si la fila falla después del sello, el sello y el artefacto quedan y la siguiente `fit_model` adopta.
+  - A7 (sonda 3): las épocas quedan en `models/.candidates-launch-1/epoch-1` y `epoch-2`, cada una con su `artifact.json`, y el error nombra la carpeta; no hay fila ni sello.
+  - A10: `cord_test_predictions.json` tiene 100 recibos y es el mismo conjunto que `eval_cord`. Con su TED (Zhang-Shasha de costo unitario con `zss`, claves sin orden e importes a centavos), las 200 cifras por recibo coinciden con `eval_cord` con una diferencia de 0 y C01 da −4,1858 [−6,5595; −2,0048], igual al sello. Sin normalizar los importes da −3,97 [−6,33; −1,78], y tampoco se cumple.
+  - A11: la suma de las tareas del estado del lanzamiento sellado da 5.868,4 s.
+- **Los motivos registrados.** A6: el motivo es cierto; `test_erp.py::test_posting_twice_creates_one_invoice` cubre la carga idempotente. A8: la cifra es cierta (sin las `qr_tampered`, su cuenta sobre `eval_invoice` da 477 de 574 y con ellas 487 de 586), pero la frase «la ficha y el diccionario lo dicen» era falsa (N3). A9: el motivo es cierto; `test_cli.py` exige `documented_options() == set(CASES)` y cada caso cambia el resultado.
+- **Las dos advertencias del coordinador.**
+  - `register_model` falla después del sello: se refuta que quede trabada, con una salvedad. A nivel de función (sonda 1), la siguiente `fit_model` adopta (`mode=adopt`, `seal=match`) y después verifica. Por la línea de comandos, en modo rápido (`probe_cli1`), el `replay` con la fila fallida sale con 1; un `replay` normal después sale con 1 (`ErpRejected 409` en el `deliver` del lanzamiento) y deja otra corrida fallida. Se recupera con `run --run-key <lanzamiento> --from fit_model` (`mode=adopt`), y después `replay` cierra (`state=first`). No había prueba de este camino, y el texto «la corrida siguiente la vuelve a insertar» (D62 y la A5 de este documento) prometía de más (N4).
+  - La rama `SealError` de `_adopt` se comporta como está documentada: con el tokenizador del sello cambiado, o con una cifra de validación cambiada y la huella igual, la sonda 2 da `SealError` con «…no se registra (docs/runbook.md, R7)» y 0 filas. No tenía prueba en la suite.
+
+**Las comprobaciones debilitadas (`30f622e`, `cdd9dd2`)**
+
+- `written()`, que compara tamaño y `st_mtime_ns`, es ahora el único oráculo de «nada escrito» en `test_rebuild`, `test_api`, `test_cli` y `test_pipeline`. La sonda (`tests.fixtures.pipeline_state.written`) dio:
+
+  | Mutación | `written()` la detecta |
+  | --- | --- |
+  | Mismo tamaño, otros bytes, `os.utime` que restaura la fecha | No |
+  | Reescribir los mismos bytes | Sí (más estricto que antes) |
+  | Una inserción de SQLite | Sí |
+  | Una transacción vacía | No (los bytes de antes tampoco la veían) |
+  | Una carpeta vacía nueva | No (los bytes de antes tampoco la veían) |
+
+- Ninguna regresión realista escapa: `src/` no tiene `os.utime`, `copy2`, `copystat` ni `copytree` (solo `shutil.copy` en `pipeline.py:633-634`, que pone una fecha nueva).
+- `cdd9dd2` cambió el final de la prueba de A5, que antes relanzaba de verdad, por un `_launch` de mentira; la sonda 4 lo corre de verdad y pasa. Advertencia, no bloqueante.
+
+**Las salidas regeneradas (`1aba749`, `248d13c`)**
+
+- Frente a `832271f` cambian solo ocho archivos: `dim_pipeline_run.parquet` (agrega la corrida `no_delivery` `20261119T000742729527Z`, que está en el almacén sellado; las otras 22 filas son iguales, salvo que `invoices` pasa de int64 a double por el NaN de la fila nueva), los dos manifiestos (sus SHA-256 coinciden con los archivos), `summary.json` del sitio y `evaluation_summary.json` (solo agregan `post_seal_analysis`, `sealed_verdict_es` y la frase nueva de C08), `evaluation_summary.md` y los dos JSON nuevos, iguales byte a byte a los de su reconstrucción. El resto de `outputs/`, `reports/`, `dashboard/` y `docs/figures` es igual byte a byte a `832271f`.
+- El registro de validación del lanzamiento no se reemplazó: `fact_validation.parquet` es el de `832271f`, con M04, M05 y M06 de `20261118T201144848904Z`. Una reconstrucción da M02 y M03 (220 filas).
+
+**El diferencial**
+
+- La línea de comandos, en modo rápido, una copia nueva de cada commit, 37 casos en el mismo orden: las ayudas y un comando desconocido; `make-fixture` (`../outside` y `data/quick`); `figures` y `docs-sync` antes de correr; diez rechazos (`--only` con `--from`, `--run-key ABC`, una tarea inexistente, `task load`, tres `synth-sample`, `serve 0.0.0.0`, el puerto 70000 y `--until XNOPE`); `replay --until` del lanzamiento, de D1 y otra vez del lanzamiento; `replay` dos veces y `run`; `task export` y `task match` de la corrida cerrada; `figures` y `docs-sync`; y mover el almacén y `interim` y después `replay` y `run`. Compara la salida, los errores (normalizados por claves de corrida, rutas y tiempos), el código de salida y si la copia cambió. La única diferencia es la pedida: con el almacén y `interim` movidos, `replay` pasa de 0 a 2 y `run` de 0 (escribía) a 2 (no escribe), con el mensaje que nombra R11.
+- Lo que deja escrito el modo rápido: los 20 Parquet tienen el mismo contenido; `algorithms.json`, `data.json`, `validation_rules.json`, el sello y `validation/latest.*` son iguales normalizados; `operation.json` y el HTML del tablero solo cambian segundos; `summary.json` y el resumen solo cambian lo de B1 y A1; se agregan los dos JSON nuevos.
+- La API (`TestClient` en una copia rápida de cada commit, 16 llamadas: `/health` sin token, con un token malo y con el bueno, una ruta inexistente, un método incorrecto, `GET /runs/<lanzamiento>` y su `/review`, una clave inexistente y otra mal formada, `POST /runs` sin token, `POST /runs`, `POST /runs` con la lectura forzada a fallar y el reintento): los estados y los cuerpos son iguales, salvo A4 (503 a 200).
+
+**Las suites, en `8816a14`**
+
+| Suite | Resultado |
+| --- | --- |
+| Por defecto, en reposo, dos veces | 1.287 pasan, 1 se salta, 20 quedan fuera, en 121,67 s y 118,72 s (1.288 recogidas, como dice el README). Dentro del límite de 180 s; la primera pasa el presupuesto de 120 s (N5) |
+| `-m real_data`, en la copia reconstruida | 7 pasan |
+| `-m real_data`, en una copia de los datos del repositorio | 6 pasan y 1 falla (`assert 1032.0 <= 600`) |
+| `-m docker` | 2 pasan en 119,59 s; Docker queda igual |
+
+**El `data/` del repositorio**
+
+- No hay un camino soportado para repetir el cierre en el lugar: la corrida del cierre está cerrada (`task export` y `task match` de una corrida cerrada salen con 2), y el evaluador lo logró editando un almacén de solo inserción. La forma honesta es R11 en el lugar, guardando los cuatro lugares movidos sin borrarlos: `replay` (unos 27 minutos), `run` y `pytest -m real_data`.
+- Lo que cambia en `data/` con R11 en el lugar: se reescriben el almacén, `interim`, las entregas con un manifiesto de claves nuevas y el ERP sustituto con otras fechas de creación; el sello, `models`, CORD y ARCA no cambian y los dos JSON al lado del sello salen iguales byte a byte. En las salidas versionadas, si se regeneran: `dim_pipeline_run`, `fact_validation` (que pasa a M02 y M03, 220 filas), los segundos de `fact_daily_ops` y `fact_invoice`, y en el sitio `operation.json`, `summary.json`, `validation_rules.json` y su manifiesto; también `reports/validation/latest.*`, el HTML del tablero y la clave del bloque del README.
+- El registro M04 a M06 del lanzamiento no se conserva en el almacén nuevo: queda solo en la carpeta guardada y en el historial de git. Se conserva haciendo R11 en el lugar sin volver a confirmar las salidas regeneradas (las versionadas ya son las de la corrida sellada), o dejando `data/` como está y la prueba fallando, dicho como el tiempo del cierre sellado. El comprobador no lo hizo; la decisión es D64.
+
+**Hallazgos nuevos**
+
+- **N1 (bloqueante, causado por el cambio en `b1465c8`).** El paso 1 de R11 en `docs/runbook.md` tenía 3 CR y 1 BEL donde iban `\r` y `\a`: `data<CR>aw\deliveries\`, `data<CR>aw\cord\` y `data<CR>aw<BEL>rca\`. Leído al pie de la letra no nombraba rutas que existan: CommonMark toma el CR como fin de línea y se veía `data aw\deliveries\`. En `832271f` hay 0 y 0.
+- **N2 (bloqueante: B1 sin cumplir en un entregable de S4; ya estaba en `832271f`).** `dashboard/powerbi-design.html` mostraba para C08 «Valor 0,000» (A1) y la frase sellada mezclada («cargó mal el 23,4 % y el flujo el 0,0 %; la diferencia es 7,7 puntos»), sin decir que es la sellada; `outputs/powerbi/fact_evaluation_summary.parquet` (`verdict_es`, que lee la medida DAX «Veredicto») llevaba la misma frase.
+- **N3 (advertencia, documentación).** El estado de A8 en este documento decía «la ficha y el diccionario lo dicen», y ninguno de los dos decía que C04 cuente las `qr_tampered` como intactas; el diccionario solo tiene la fila que describe la siembra.
+- **N4 (advertencia).** Una fila del registro que falla después del sello se recupera con `run --run-key <lanzamiento> --from fit_model`, no con «la corrida siguiente»: un `replay` normal choca con 409. Ni este camino ni la rama `SealError` de `_adopt` tenían prueba.
+- **N5 (advertencia).** La suite midió 121,67 s en reposo, más que el presupuesto de 120 s; la ficha decía 118,16 s y 119,17 s: el margen sigue siendo inestable.
+
+**Estados de la comprobación.** B1 corregida en lo listado y abierta en el tablero (N2); B2 corregida; B3 corregida en el código, con el texto de R11 roto (N1); B4 corregida (421 s, 600 de 600 árboles iguales); A1, A3, A4, A5, A7, A10 y A11 corregidas; los motivos de A6 y A9 son ciertos y el de A8 en parte (N3). Hallazgos nuevos: N1 y N2 bloqueantes; N3, N4 y N5 advertencias.
+
+## La segunda corrección
+
+Un agente con Sonnet la escribió con las mismas reglas (la prueba primero donde hay un rojo posible, cada cambio en su commit), sobre los hallazgos de la comprobación. B1 y B3 volvían a estar abiertos por N2 y N1, por lo que el plan permite una vuelta más.
+
+- **N1** (`de2fe9a`): el paso 1 de R11 vuelve a nombrar `data\raw\deliveries\`, `data\raw\cord\` y `data\raw\arca\`, escrito en bytes. Una prueba nueva de `tests/docs` falla si el README o un documento de `docs/` tiene un byte de control que no sea el salto de línea o la tabulación (un retorno de carro solo dentro de un CRLF); se vio fallar sobre el archivo anterior, con el CR y el BEL.
+- **N2** (`e046e44`, y las salidas en `f1557b9`): `fact_evaluation_summary` cuenta cada criterio como el resumen. `reporting.criteria_texts` (que reutiliza `_published` y `texts.threshold_figure`, sin copiar ninguna frase) arma, para cada fila de `eval_criteria`, el veredicto publicado, el sellado y la cifra que prueba el umbral; `export` los carga en `ref_criterion_text` y el mart los une. La tabla agrega dos columnas (`sealed_verdict_es` y `threshold_figure_es`) y no cambia ninguna de las que tenía; la tabla «Criterios C01-C10» del diseño y de Power BI muestra «Lo que prueba el umbral» en lugar de «Valor», con el veredicto publicado. El diccionario se escribió con `docs_sync`. Dos pruebas nuevas se vieron fallar antes del código. El sello, `eval_criteria` y `post_seal_analysis.json` no cambian; `fact_validation` conserva M04 a M06 del lanzamiento.
+- **N3**: la ficha dice en «Limitaciones» que C04 cuenta las 12 `qr_tampered` como QR intacto, con 487 de 586 con ellas y 477 de 574 sin ellas; el estado de A8 apunta a la ficha.
+- **N4** (`e2cc709`): D62, la A5 de este documento, R6 y R7 dicen cómo se recupera una fila que falló después del sello (`run --run-key <lanzamiento> --from fit_model`) y por qué un `replay` común no. Dos pruebas nuevas cubren lo que la comprobación señaló sin prueba: la rama `SealError` de `_adopt` (con el tokenizador y con una cifra de validación cambiados: `SealError` que nombra R7 y ninguna fila) y la recuperación por la línea de comandos en modo rápido (la fila falla, un `replay` común sale con 1 por el 409, `run --run-key … --from fit_model` adopta). Prueban un comportamiento que ya existía, así que no tienen un rojo previo.
+- **N5**: la suite por defecto, con las pruebas de esta corrección (recoge 1.294), midió 124,61 s y 124,44 s en dos corridas seguidas en reposo, con el código del último commit de código: por encima del presupuesto de 120 s y dentro del límite de 180 s. La prueba de la recuperación corre tres comandos y cuesta unos 4,8 s con torch ya cargado; las demás pruebas nuevas cuestan décimas. El margen sigue siendo inestable y no se arregló: es lo que D31 llama presupuesto de trabajo, y una unidad que sume pruebas debe volver a medirlo.
+- **`data/` y `-m real_data`** (D64): el `data/` del repositorio guarda el cierre sellado de 1.032 s, así que `pytest -m real_data` ahí falla en la comprobación del tiempo del cierre (RNF02, `assert 1032.0 <= 600`) y las otras seis pasan. La prueba no se tocó: dice lo que RNF02 exige. Sobre la reconstrucción de R11 (cierre de 421 s, medido por la comprobación) pasan las 7. Quien quiera la prueba en verde en su copia hace R11 en el lugar (unos 27 minutos), sin volver a confirmar las salidas regeneradas.
 
 ## Lo que queda
 
-La comprobación, la página del sitio, el `.pbix` y lo que el plan deja al dueño (sección 29), entre ellos si una versión posterior, con su propio sello, calcula C08 por carga y B1 con la orden leída (D59, D60). Ningún bloqueante ni advertencia de esta evaluación queda abierto.
+La página del sitio, el `.pbix` y lo que el plan deja al dueño (sección 29), entre ellos si una versión posterior, con su propio sello, calcula C08 por carga y B1 con la orden leída (D59, D60), si el `data/` del repositorio se reconstruye con R11 en el lugar (D64) y si el presupuesto de la suite pasa de 120 s a un valor que la suite cumpla (N5). Ningún bloqueante de la evaluación ni de su comprobación queda abierto. Queda abierta una advertencia, N5 (la suite por defecto pasa el presupuesto de 120 s, con sus medidas arriba, y sigue dentro del límite de 180 s): no es un defecto de una cifra ni de un texto, y es del dueño decidir si se acorta la suite o se sube el presupuesto.

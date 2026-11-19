@@ -187,7 +187,7 @@ Las 13 clases de discrepancia que el generador siembra, el modelo de datos y las
 | [docs/review-advisories.md](docs/review-advisories.md) | Los 38 hallazgos de las revisiones nativas, cada uno con su ubicación y su estado |
 | [docs/evaluation.md](docs/evaluation.md) | La evaluación independiente, sus bloqueantes y advertencias, y las correcciones |
 
-La evaluación independiente la hizo un agente con Opus que no construyó el proyecto (L112): reprodujo los veredictos, las 600 decisiones y el sello, y encontró cuatro bloqueantes y once advertencias, que se corrigieron o se dejaron dichos con la prueba primero ([docs/evaluation.md](docs/evaluation.md)); la comprobación de las correcciones la hace otro agente (plan, sección 28). La corrección del lanzamiento (la métrica de CORD que leía el orden de las claves) y su efecto son del registro (D51); la definición de `ted_accuracy` y cómo anotar 94,00 contra 93,65 son del dueño.
+La evaluación independiente la hizo un agente con Opus que no construyó el proyecto (L112): reprodujo los veredictos, las 600 decisiones y el sello, y encontró cuatro bloqueantes y once advertencias, que se corrigieron o se dejaron dichos con la prueba primero ([docs/evaluation.md](docs/evaluation.md)); la comprobación de las correcciones la hizo otro agente (plan, sección 28), y lo que encontró se corrigió en una segunda vuelta ([docs/evaluation.md](docs/evaluation.md), «Comprobación» y «La segunda corrección»). La corrección del lanzamiento (la métrica de CORD que leía el orden de las claves) y su efecto son del registro (D51); la definición de `ted_accuracy` y cómo anotar 94,00 contra 93,65 son del dueño.
 
 Advertencias abiertas: 0 de las 38 de las revisiones nativas: 15 corregidas, 1 refutada y 22 dejadas con su motivo (docs/review-advisories.md).
 
@@ -204,7 +204,8 @@ Este proyecto lo construyen agentes de IA, cada uno con el modelo que el dueño 
 - **La documentación** (U23). Este README, la ficha del modelo, el diccionario, el runbook, el paso a paso y las advertencias los escribió un agente con Sonnet con la prueba primero (`tests/docs/test_docs.py`); las cifras salen de los archivos sellados y una prueba las compara.
 - **La evaluación independiente** (L112). Un agente con Opus, en un clon aparte, recalculó cada cifra con su propio código y encontró cuatro bloqueantes: C08 (sintético) calculado por factura y no por carga, la línea base B1 con la orden de la verdad, el runbook R11 que no reconstruía y el cierre de 1.032 s.
 - **Las correcciones.** Un agente con Opus, con la prueba primero; lo que habría cambiado lo sellado se publica al lado como análisis posterior al sello (D59, D60) y el sello no se tocó ([docs/evaluation.md](docs/evaluation.md)).
-- **Lo que no se hizo todavía.** La comprobación de las correcciones, la página del sitio y el `.pbix`.
+- **La comprobación y la segunda corrección** (L115). Otro agente con Opus, en dos clones, rehízo los bloqueantes con sus propios lectores: confirmó las correcciones y encontró dos bloqueantes nuevos (el paso 1 de R11 con caracteres de control, y el diseño del tablero y la tabla de Power BI con la frase de C08 mezclada) y tres advertencias; un agente con Sonnet las corrigió con la prueba primero.
+- **Lo que no se hizo todavía.** La página del sitio y el `.pbix`.
 - **Memoria.** Engram guarda el contexto entre sesiones; el documento de seguimiento conserva las palabras del dueño tal cual.
 
 ## Para qué sirve
@@ -255,6 +256,8 @@ $env:PYTHONPATH = "src"
 .venv\Scripts\python -m invoiceflow replay
 .venv\Scripts\python -m pytest -m real_data
 ```
+
+El `data/` de este repositorio guarda el cierre sellado, que tardó 1.032 s: ahí `pytest -m real_data` falla a propósito en la prueba del tiempo del cierre (RNF02, 600 s) y pasan las otras seis. Sobre una reconstrucción de R11 (`docs/runbook.md`), cuyo cierre tarda unos 420 s, pasan las siete (D64).
 
 **5. Airflow en Docker** (`airflow/`, `docker compose` con los secretos en `.env`; `airflow/init.sh` los crea) y la prueba de humo contra ERPNext (`docker/erpnext/compose.yaml`, marca `erpnext`, una vez):
 
