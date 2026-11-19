@@ -25,6 +25,7 @@ from invoiceflow.synth import printed
 from invoiceflow.synth.render import render
 
 ERROR_KINDS = ("quantity", "price", "total", "empty_field")
+ORDER_MISREAD = "order"            # the order number read as one no order has: what B1 has to take from the model, not from the truth (D48, D60)
 EXTENSIONS = {"png": ".png", "jpeg": ".jpg", "pdf": ".pdf"}
 
 
@@ -44,6 +45,8 @@ def seed_error(tree: dict[str, Any], kind: str) -> dict[str, Any]:
         totals["total"] = printed.amount((parse_amount(totals["total"]) or Decimal(0)) + 1)
     elif kind == "empty_field":
         line["importe"] = ""
+    elif kind == ORDER_MISREAD:
+        tree["header"]["orden_compra"] = "OC-0000-000000"
     else:
         raise ValueError(kind)
     return tree

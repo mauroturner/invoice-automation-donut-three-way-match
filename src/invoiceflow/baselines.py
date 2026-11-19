@@ -130,10 +130,15 @@ def _arrival(truth: InvoiceTruth) -> tuple:
     return truth.received_on, SPLITS.index(truth.split), int(truth.invoice_key.rsplit("-", 1)[1])
 
 
-def replay(view: SealedConfig, master: Master, truths: Iterable[InvoiceTruth], decide_one: Callable[[InvoiceTruth, ErpView], Decision]) -> dict[str, Decision]:
+def replay(view: SealedConfig, master: Master, truths: Iterable[InvoiceTruth], decide_one: Callable[[InvoiceTruth, ErpView], Decision], *,
+           order_of: Callable[[InvoiceTruth], str | None] | None = None) -> dict[str, Decision]:
     """The decision of every invoice in `truths` (key -> ``Decision``) given by ``decide_one(truth, erp_view)`` over an ERP view made from `master` for the day it reached accounts payable. The
     invoices are processed in the order they arrived (``received_on``, partition, ordinal), so what an earlier one posted (the quantity invoiced, the voucher) is what a later one finds: each
-    baseline has its own world, in which only what it posted counts."""
+    baseline has its own world, in which only what it posted counts.
+
+    `order_of(truth)` is the order number the baseline cites, the one whose order, receipts and invoiced quantities the view holds and on which what it posts is counted. By default it is the
+    page's (the truth's), which is what the oracle reads; B1 cites what the model read (D48, D60)."""
+    cite = order_of if order_of is not None else (lambda truth: truth.header.orden_compra)
     orders, receipts = _orders(master), _receipts(master)
     supplier_by_cuit = {supplier.cuit: supplier.supplier_key for supplier in master.suppliers}
     invoiced: dict[str, dict[str, Decimal]] = defaultdict(lambda: defaultdict(Decimal))
@@ -141,7 +146,7 @@ def replay(view: SealedConfig, master: Master, truths: Iterable[InvoiceTruth], d
     decisions: dict[str, Decision] = {}
     for truth in sorted(truths, key=_arrival):
         fields, qr = truth_fields(truth), truth_qr(truth, view)
-        cited = truth.header.orden_compra
+        cited = cite(truth)
         po = orders.get(cited) if cited else None
         day = truth.received_on
         erp = ErpView(po=po, receipts_until_day=tuple(r for r in receipts.get(cited, ()) if r.date <= day) if po else (), invoiced_before=dict(invoiced[cited]) if po else {},

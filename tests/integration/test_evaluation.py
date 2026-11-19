@@ -236,3 +236,33 @@ def test_the_close_writes_the_analysis_beside_the_seal_and_the_summary_tells_c08
     assert "| ID | Criterio | Lo que prueba el umbral | Veredicto |" in text and "Análisis posteriores al sello" in text and "| Valor |" not in text
     assert texts.es(first["c08_preregistered"]["value"] * 100, 1) in text and "texto sellado" in text
 
+
+def test_b1_cites_the_order_number_the_model_read_and_the_sealed_b1_is_kept_beside_it(quick_view, tmp_path_factory, monkeypatch):
+    """B2 of the evaluation (D60): D48 says B1 takes the order number from what the model read; the sealed B1 built the view from the truth's order. With the order misread on a clean invoice
+    that the sealed B1 posts, B1 under D48 finds no order and sends it to review; the analysis publishes B1 under D48 with its C08, both ways, and the sealed figures do not move."""
+    from tests.fixtures.stub_extractor import ORDER_MISREAD
+
+    base = build_world(quick_view, tmp_path_factory.mktemp("eval_order_base"))
+    base_conn, _ = run_world(base, tmp_path_factory.mktemp("eval_order_base_run"), monkeypatch)
+    sealed_b1 = evaluation.b1_decisions(base_conn, base.view, base.master, base.all_truths(), order="truth")
+    victim = next(t for t in base.all_truths() if t.planted == "none" and sealed_b1[t.invoice_key].decision == "auto_post")
+    world = build_world(quick_view, tmp_path_factory.mktemp("eval_order_world"), errors={victim.invoice_key: ORDER_MISREAD})
+    conn, _ = run_world(world, tmp_path_factory.mktemp("eval_order_run"), monkeypatch)
+    truths = world.all_truths()
+    assert evaluation.read_fields(conn, victim.invoice_key).orden_compra == "OC-0000-000000", "the model misread the order number"
+    as_sealed = evaluation.b1_decisions(conn, world.view, world.master, truths, order="truth")
+    as_read = evaluation.b1_decisions(conn, world.view, world.master, truths, order="read")
+    assert as_sealed[victim.invoice_key].decision == "auto_post" and as_read[victim.invoice_key].decision == "review"
+    assert {k for k in as_read if as_read[k].decision != as_sealed[k].decision} == {victim.invoice_key}
+    sealed = evaluation.evaluate_test(conn, world.view, world.master, truths, repeat_new=0)
+    assert sealed.figures["baselines"]["b1:all"]["auto_post"] == sum(1 for d in as_sealed.values() if d.decision == "auto_post"), "the seal keeps the B1 it computed"
+    analysis = evaluation.post_seal_analysis(conn, world.view, world.master, truths)
+    read = analysis["b1_read_order"]
+    assert read["baselines"]["all"]["auto_post"] == sealed.figures["baselines"]["b1:all"]["auto_post"] - 1
+    assert {c: read["baselines"][c]["auto_post"] for c in ("test_known", "test_new")} == {
+        c: sum(1 for t in truths if t.split == c and as_read[t.invoice_key].decision == "auto_post") for c in ("test_known", "test_new")}
+    per_invoice, per_post = read["c08_per_invoice"], read["c08_preregistered"]
+    flow_bad = sealed.figures["baselines"]["flow:all"]["bad_post"]
+    assert per_invoice["b1_bad"] == read["baselines"]["all"]["bad_post"] and per_invoice["value"] == pytest.approx((per_invoice["b1_bad"] - flow_bad) / len(truths))
+    assert per_post["b1"]["posts"] == read["baselines"]["all"]["auto_post"] and per_post["b1"]["bad"] == read["baselines"]["all"]["bad_post"]
+    assert analysis["decisions"] == ["D59", "D60"] and analysis["c08_preregistered"]["b1"]["posts"] == sealed.figures["baselines"]["b1:all"]["auto_post"]

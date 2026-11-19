@@ -231,13 +231,26 @@ def _judged(conn: Any, view: SealedConfig, by_key: Mapping[str, InvoiceTruth], d
     return names, {k: names[k] == "auto_post" and _would_be_bad(by_key[k], conn, view) for k in names}
 
 
-def _b1_world(conn: Any, view: SealedConfig, master: Master, truths: Sequence[InvoiceTruth]) -> dict[str, Decision]:
-    """B1 over the test in its own ERP world, as the seal has it: the QR the flow read, the order number the flow read for the decision and the page's order (the truth's) for the view."""
+B1_ORDERS = ("truth", "read")
+
+
+def b1_decisions(conn: Any, view: SealedConfig, master: Master, truths: Sequence[InvoiceTruth], *, order: str) -> dict[str, Decision]:
+    """B1 over the test in its own ERP world, with the QR the flow read and the order number the flow read for the decision. `order` says which order the ERP view is built from: ``read``, the one
+    the model read, as D48 says (D60); ``truth``, the page's, as the seal computed it (B2 of the evaluation: the sealed B1 is kept so that the seal is rebuilt, and published as such)."""
+    if order not in B1_ORDERS:
+        raise ValueError(f"b1_decisions: order={order!r}; se esperaba uno de {B1_ORDERS}")
 
     def from_b1(truth: InvoiceTruth, erp: ErpView) -> Decision:
         return b1(read_fields(conn, truth.invoice_key), read_qr_row(conn, truth.invoice_key), erp, view)
 
-    return replay(view, master, truths, from_b1)
+    if order == "truth":
+        return replay(view, master, truths, from_b1)
+    return replay(view, master, truths, from_b1, order_of=lambda truth: read_fields(conn, truth.invoice_key).orden_compra)
+
+
+def _b1_world(conn: Any, view: SealedConfig, master: Master, truths: Sequence[InvoiceTruth]) -> dict[str, Decision]:
+    """The sealed B1 (``b1_decisions`` with the truth's order)."""
+    return b1_decisions(conn, view, master, truths, order="truth")
 
 
 def _flow_judged(conn: Any, view: SealedConfig, truths: Sequence[InvoiceTruth]) -> tuple[dict[str, str], dict[str, bool]]:
@@ -263,15 +276,31 @@ def _rate_difference(keys: Sequence[str], a: tuple[Mapping[str, str], Mapping[st
     return {"b1": figures_a, "flow": figures_b, "value": value, "ci_low": low, "ci_high": high, "passed": None if low is None else low > 0}
 
 
+def _per_invoice_difference(keys: Sequence[str], a: tuple[Mapping[str, str], Mapping[str, bool]], b: tuple[Mapping[str, str], Mapping[str, bool]], view: SealedConfig) -> dict[str, Any]:
+    """C08 as the seal computes it: «`a` posted badly» less «`b` posted badly», by invoice of the whole test, resampled by invoice."""
+    paired_a = [float(a[1][k] and a[0][k] == "auto_post") for k in keys]
+    paired_b = [float(b[1][k] and b[0][k] == "auto_post") for k in keys]
+    value, low, high = metrics.paired_difference(paired_a, paired_b, resamples=view.evaluation.resamples, seed=view.evaluation.seed)
+    return {"b1_bad": int(sum(paired_a)), "flow_bad": int(sum(paired_b)), "invoices": len(keys), "value": value, "ci_low": low, "ci_high": high,
+            "passed": None if low is None else low > 0}
+
+
 def post_seal_analysis(conn: Any, view: SealedConfig, master: Master, truths: Sequence[InvoiceTruth]) -> dict[str, Any]:
     """What is published **beside** the sealed figures and never in their place (D59, after D45 of project 06): computed from the same issued rows and the same truth as ``evaluate_test``, it
     changes nothing that is sealed. ``c08_preregistered`` is C08 as requirements 8.1 define it, the difference of the bad-post rates (bad posts over auto-posts) of the sealed B1 and the flow,
-    which the seal computed per invoice of the whole test instead."""
+    which the seal computed per invoice of the whole test instead. ``b1_read_order`` is B1 as D48 says, with the order number the model read (D60; the sealed one took the truth's): its
+    auto-posts, bad posts and rates by cohort, and C08 against the flow both per invoice (the sealed form) and per auto-post (the preregistered one)."""
     by_key = {t.invoice_key: t for t in truths}
     keys = sorted(by_key)
     flow = _flow_judged(conn, view, truths)
     sealed_b1 = _judged(conn, view, by_key, _b1_world(conn, view, master, truths))
-    return {"sealed": False, "synthetic": True, "invoices": len(keys), "decisions": ["D59"], "c08_preregistered": _rate_difference(keys, sealed_b1, flow, view)}
+    read_b1 = _judged(conn, view, by_key, b1_decisions(conn, view, master, truths, order="read"))
+    cohorts = {"all": list(truths), **{split: [t for t in truths if t.split == split] for split in TEST_SPLITS}}
+    rows = {cohort: _baseline_row("b1", cohort, [{"invoice_key": t.invoice_key, "planted": t.planted, "qr_printed": t.qr_text is not None} for t in group], read_b1[0], read_b1[1])
+            for cohort, group in cohorts.items()}
+    return {"sealed": False, "synthetic": True, "invoices": len(keys), "decisions": ["D59", "D60"], "c08_preregistered": _rate_difference(keys, sealed_b1, flow, view),
+            "b1_read_order": {"baselines": {c: {k: v for k, v in r.items() if k not in ("baseline", "cohort")} for c, r in rows.items()},
+                              "c08_per_invoice": _per_invoice_difference(keys, read_b1, flow, view), "c08_preregistered": _rate_difference(keys, read_b1, flow, view)}}
 
 
 def _would_be_bad(truth: InvoiceTruth, conn: Any, view: SealedConfig) -> bool:
@@ -449,5 +478,5 @@ def criteria_from_seal(seal: Mapping[str, Any]) -> list[Criterion]:
     return rebuilt
 
 
-__all__ = ["Criterion", "EvaluationError", "EvaluationResult", "criteria_from_seal", "criteria_of", "evaluate_cord", "evaluate_criteria", "evaluate_test", "post_seal_analysis", "read_fields",
+__all__ = ["B1_ORDERS", "Criterion", "EvaluationError", "EvaluationResult", "criteria_from_seal", "criteria_of", "evaluate_cord", "evaluate_criteria", "evaluate_test", "b1_decisions", "post_seal_analysis", "read_fields",
            "read_qr_row"]
