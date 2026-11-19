@@ -14,7 +14,7 @@ import pytest
 
 from invoiceflow import launch
 from tests.e2e.cli_helpers import cli, config_of
-from tests.fixtures.pipeline_state import copy_state
+from tests.fixtures.pipeline_state import copy_state, written
 
 # R11, step 1: what is moved aside (never the seal, the sealed artifact, CORD or ARCA's specification)
 MOVED = ("warehouse", "interim_dir", "deliveries", "erp_db")
@@ -86,8 +86,8 @@ def test_r11_followed_in_part_is_refused_before_anything_is_written_and_names_r1
     aside = tmp_path / "aside"
     aside.mkdir()
     move_aside(state, moved, aside)
-    before = digest(state.root)
+    before = written(state.root)
     for args in (("replay",), ("run",)):
         result = cli(*args, "--config", config_of(state))
         assert result.code == 2 and says in result.err and "R11" in result.err and "No se escribió nada" in result.err, (args, result.err)
-    assert digest(state.root) == before
+    assert written(state.root) == before

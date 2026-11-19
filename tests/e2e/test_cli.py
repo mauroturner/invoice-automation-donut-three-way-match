@@ -20,7 +20,7 @@ from invoiceflow import pipeline
 from invoiceflow.config import ENV_CONFIG, ENV_HOME, FINGERPRINT_KEYS, INFORMATIVE_KEYS, UNSEALED_KEYS
 from invoiceflow.registry import config_fingerprint
 from tests.e2e.cli_helpers import PROJECT_ROOT, cli, config_of
-from tests.fixtures.pipeline_state import copy_state, fresh_project
+from tests.fixtures.pipeline_state import copy_state, fresh_project, written
 
 
 def runs_of(state) -> list[str]:
@@ -28,8 +28,8 @@ def runs_of(state) -> list[str]:
     return sorted(p.stem for p in folder.iterdir()) if folder.is_dir() else []
 
 
-def tree(state) -> dict[str, bytes]:
-    return {p.relative_to(state.root).as_posix(): p.read_bytes() for p in sorted(state.root.rglob("*")) if p.is_file()}
+def tree(state) -> dict[str, tuple[int, int]]:
+    return written(state.root)
 
 
 # --- the documented options: each one has its case ------------------------------------------------------------------------------
@@ -82,8 +82,9 @@ def case_run_key(state, tmp_path):
 
 
 def case_until(state, tmp_path):
-    result = cli("replay", "--until", "D2026-10-02", "--config", config_of(state))
-    assert result.code == 0 and "2 corridas" in result.out and "D2026-10-05" not in result.out
+    """One run up to the first day instead of the three days and the close a replay runs without it (one day is enough to see the option change the result; A2 of the evaluation)."""
+    result = cli("replay", "--until", "D2026-10-01", "--config", config_of(state))
+    assert result.code == 0 and "1 corrida" in result.out and "1 corridas" not in result.out and "D2026-10-01" in result.out and "D2026-10-02" not in result.out
 
 
 def case_task(state, tmp_path):

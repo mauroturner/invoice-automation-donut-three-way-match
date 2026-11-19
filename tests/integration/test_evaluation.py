@@ -208,7 +208,7 @@ def test_c08_as_preregistered_is_computed_beside_the_sealed_one_from_the_same_de
     assert evaluation.evaluate_test(conn, world.view, world.master, truths, repeat_new=0).figures == sealed.figures, "computing the analysis changes nothing that is sealed"
 
 
-def test_the_close_writes_the_analysis_beside_the_seal_and_the_summary_tells_c08_per_invoice_with_the_sealed_sentence_kept(perfect, tmp_path):
+def test_the_close_writes_the_analysis_and_its_cord_predictions_beside_the_seal_and_the_summary_tells_c08_per_invoice(perfect, tmp_path):
     from invoiceflow import texts
 
     world, conn = perfect
@@ -220,8 +220,21 @@ def test_the_close_writes_the_analysis_beside_the_seal_and_the_summary_tells_c08
     kept, analysis_path = seal.read_bytes(), seal.with_name("post_seal_analysis.json")
     first = json.loads(analysis_path.read_text(encoding="utf-8"))
     assert first["seal_sha256"] == __import__("hashlib").sha256(kept).hexdigest() and first["c08_preregistered"]["b1"]["posts"] > 0
+    predictions_path = seal.with_name("cord_test_predictions.json")
+    predicted = json.loads(predictions_path.read_text(encoding="utf-8"))
     reporting.evaluate(conn, project.cfg, world.view, RunMeta("close-2", datetime(2026, 10, 7)), world.master, world.all_truths(), **args)
     assert seal.read_bytes() == kept and json.loads(analysis_path.read_text(encoding="utf-8")) == first, "a repetition leaves the seal and rewrites the same analysis"
+    assert json.loads(predictions_path.read_text(encoding="utf-8")) == predicted, "and the same CORD predictions"
+    # A10 of the evaluation (D63): the trees the chosen model and the checkpoint read on each receipt of CORD's test, and the receipt's truth, are written beside the seal by the close (the one
+    # reading of the split), so the TED of each receipt is recomputed from the file
+    from invoiceflow import metrics
+
+    assert predicted["synthetic"] is False and "CC BY 4.0" in predicted["attribution"] and len(predicted["receipts"]) == 4
+    stored = {(r[0], r[1]): r[2] for r in conn.execute("SELECT model, receipt_key, ted FROM eval_cord WHERE seal_state = 'sealed'")}
+    for receipt in predicted["receipts"]:
+        assert set(receipt) == {"receipt_key", "truth", "chosen", "checkpoint"} and receipt["chosen"] == {"total": {"total_price": "1"}} and receipt["checkpoint"] == {}
+        for model in ("chosen", "checkpoint"):
+            assert 100.0 * metrics.ted_accuracy(receipt[model], receipt["truth"]) == pytest.approx(stored[(model, receipt["receipt_key"])])
     summary = reporting.build_summary(conn, world.view, seal_path=seal)
     assert summary["post_seal_analysis"] == first
     c08 = next(c for c in summary["criteria"] if c["criterion_id"] == "C08")
@@ -237,13 +250,12 @@ def test_the_close_writes_the_analysis_beside_the_seal_and_the_summary_tells_c08
     assert texts.es(first["c08_preregistered"]["value"] * 100, 1) in text and "texto sellado" in text
 
 
-def test_b1_cites_the_order_number_the_model_read_and_the_sealed_b1_is_kept_beside_it(quick_view, tmp_path_factory, monkeypatch):
+def test_b1_cites_the_order_number_the_model_read_and_the_sealed_b1_is_kept_beside_it(perfect, quick_view, tmp_path_factory, monkeypatch):
     """B2 of the evaluation (D60): D48 says B1 takes the order number from what the model read; the sealed B1 built the view from the truth's order. With the order misread on a clean invoice
     that the sealed B1 posts, B1 under D48 finds no order and sends it to review; the analysis publishes B1 under D48 with its C08, both ways, and the sealed figures do not move."""
     from tests.fixtures.stub_extractor import ORDER_MISREAD
 
-    base = build_world(quick_view, tmp_path_factory.mktemp("eval_order_base"))
-    base_conn, _ = run_world(base, tmp_path_factory.mktemp("eval_order_base_run"), monkeypatch)
+    base, base_conn = perfect                       # the same world read without the error
     sealed_b1 = evaluation.b1_decisions(base_conn, base.view, base.master, base.all_truths(), order="truth")
     victim = next(t for t in base.all_truths() if t.planted == "none" and sealed_b1[t.invoice_key].decision == "auto_post")
     world = build_world(quick_view, tmp_path_factory.mktemp("eval_order_world"), errors={victim.invoice_key: ORDER_MISREAD})
@@ -272,26 +284,3 @@ def test_b1_cites_the_order_number_the_model_read_and_the_sealed_b1_is_kept_besi
     assert line.startswith("- **B1 con la orden que leyó el modelo** (D48, D60;") and f"{read['baselines']['all']['auto_post']} facturas" in line
     assert texts.es(per_invoice["value"] * 100, 1) in line and texts.es(per_post["value"] * 100, 1) in line and "(sintético)" in line
     assert line in reporting.summary_markdown({"source": "warehouse", "criteria": [], "post_seal_analysis": analysis})
-
-
-def test_the_close_keeps_its_cord_predictions_with_the_truth_so_the_ted_is_recomputed_without_reading_cord_again(perfect, tmp_path):
-    """A10 of the evaluation (D63): the trees the chosen model and the checkpoint read on each receipt of CORD's test, and the receipt's truth, are written beside the seal by the close (the one
-    reading of the split), so the TED of each receipt is recomputed from the file; a repetition writes the same file."""
-    from invoiceflow import metrics
-
-    world, conn = perfect
-    project = make_project(tmp_path / "project")
-    seal = tmp_path / "reports" / "model_seal.json"
-    write_launch_seal(seal, launch_document(world.view))
-    args = dict(seal_path=seal, chosen=Reads({"total": {"total_price": "1"}}), checkpoint=Reads({}), repeat_new=0)
-    reporting.evaluate(conn, project.cfg, world.view, RunMeta("close-1", datetime(2026, 10, 6)), world.master, world.all_truths(), **args)
-    path = seal.with_name("cord_test_predictions.json")
-    kept = json.loads(path.read_text(encoding="utf-8"))
-    assert kept["synthetic"] is False and "CC BY 4.0" in kept["attribution"] and len(kept["receipts"]) == 4
-    stored = {(r[0], r[1]): r[2] for r in conn.execute("SELECT model, receipt_key, ted FROM eval_cord WHERE seal_state = 'sealed'")}
-    for receipt in kept["receipts"]:
-        assert set(receipt) == {"receipt_key", "truth", "chosen", "checkpoint"} and receipt["chosen"] == {"total": {"total_price": "1"}} and receipt["checkpoint"] == {}
-        for model in ("chosen", "checkpoint"):
-            assert 100.0 * metrics.ted_accuracy(receipt[model], receipt["truth"]) == pytest.approx(stored[(model, receipt["receipt_key"])])
-    reporting.evaluate(conn, project.cfg, world.view, RunMeta("close-2", datetime(2026, 10, 7)), world.master, world.all_truths(), **args)
-    assert json.loads(path.read_text(encoding="utf-8")) == kept

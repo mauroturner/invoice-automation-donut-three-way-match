@@ -21,7 +21,7 @@ from invoiceflow.lock import sole_writer
 from invoiceflow.sources import SourceError
 from invoiceflow.validate import ValidationError
 from invoiceflow.warehouse import apply_schema, connect
-from tests.fixtures.pipeline_state import copy_state
+from tests.fixtures.pipeline_state import copy_state, written
 
 TOKEN = "t0ken-of-the-tests-0123456789abcdef"
 BEARER = {"Authorization": f"Bearer {TOKEN}"}
@@ -34,8 +34,8 @@ def client_of(cfg, token: str | None = TOKEN) -> testclient.TestClient:
     return testclient.TestClient(create_app(cfg, env=env), raise_server_exceptions=False, base_url="http://api")
 
 
-def tree(root: Path) -> dict[str, bytes]:
-    return {p.relative_to(root).as_posix(): p.read_bytes() for p in sorted(Path(root).rglob("*")) if p.is_file()}
+def tree(root: Path) -> dict[str, tuple[int, int]]:
+    return written(root)
 
 
 def only_a_code(response) -> str:

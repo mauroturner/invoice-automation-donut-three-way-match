@@ -30,7 +30,9 @@ EXTENSIONS = {"png": ".png", "jpeg": ".jpg", "pdf": ".pdf"}
 
 
 def page_key(image: Image.Image) -> str:
-    return hashlib.sha256(image.convert("RGB").tobytes() + str(image.size).encode()).hexdigest()
+    """The page by its pixels, as RGB (the mode the intake gives): an RGB page is hashed as it is, without the copy a conversion makes (A2 of the evaluation)."""
+    pixels = image if image.mode == "RGB" else image.convert("RGB")
+    return hashlib.sha256(pixels.tobytes() + str(image.size).encode()).hexdigest()
 
 
 def seed_error(tree: dict[str, Any], kind: str) -> dict[str, Any]:

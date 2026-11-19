@@ -14,7 +14,7 @@ from invoiceflow import pipeline
 from invoiceflow.export import verify_star_schema
 from invoiceflow.lock import RunRefusedError
 from invoiceflow.site_export import verify_site
-from tests.fixtures.pipeline_state import copy_state, result_of, stage
+from tests.fixtures.pipeline_state import copy_state, result_of, stage, written
 
 
 def rows(state, sql: str, params=()):
@@ -29,8 +29,8 @@ def state_of(state, run_key: str) -> dict:
     return json.loads((Path(state.cfg.paths.interim_dir) / "runs" / f"{run_key}.json").read_text(encoding="utf-8"))
 
 
-def tree(state) -> dict[str, tuple[int, bytes]]:
-    return {p.relative_to(state.root).as_posix(): (p.stat().st_size, p.read_bytes()) for p in sorted(state.root.rglob("*")) if p.is_file()}
+def tree(state) -> dict[str, tuple[int, int]]:
+    return written(state.root)
 
 
 def test_every_run_of_the_replay_runs_the_thirteen_tasks_and_closes_ok_with_its_files(pipeline_replayed):

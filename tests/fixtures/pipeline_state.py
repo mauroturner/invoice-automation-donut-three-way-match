@@ -27,6 +27,17 @@ def fresh_project(root: Path) -> PipelineState:
     return PipelineState(Path(root), project.cfg)
 
 
+def written(root: Path) -> dict[str, tuple[int, int]]:
+    """Every file under `root` with its size and its modification time in nanoseconds: two calls give the same answer only if no file was created, removed or written in between (a write
+    moves the time even when it leaves the same bytes), and it reads no file's bytes (A2 of the evaluation: hashing whole states was a good part of the suite)."""
+    found = {}
+    for path in sorted(Path(root).rglob("*")):
+        if path.is_file():
+            facts = path.stat()
+            found[path.relative_to(root).as_posix()] = (facts.st_size, facts.st_mtime_ns)
+    return found
+
+
 def copy_state(state: PipelineState, dest: Path) -> PipelineState:
     """A copy of the folder of `state`, read with its own configuration."""
     dest = Path(dest)

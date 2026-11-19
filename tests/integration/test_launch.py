@@ -49,11 +49,15 @@ def candidates_without_training(monkeypatch):
 
 @pytest.fixture(scope="module")
 def launched(tmp_path_factory):
-    """The one full launch of the module (the tiny model reads every page it is measured on, so a launch costs seconds): the CORD files whose rows were opened are kept to say the test split was not."""
+    """The one launch of the module (the tiny model reads every page it is measured on, so a launch costs seconds): the CORD files whose rows were opened are kept to say the test split was not.
+    Every step of the launch runs (M05, M06, the checkpoint's measure, the candidates' measures, the choice, the artifact, the registry and the seal) but the training steps: each candidate is
+    the untrained tiny model saved the way the fit saves it (``candidates_without_training``). The fit itself is the session's quick launch through the command line (``quick_launch``) and
+    ``tests/unit/test_train.py``'s (A2 of the evaluation)."""
     ctx = context(tmp_path_factory.mktemp("launch"))
     opened: list[str] = []
     real = cord._iter_rows
     with pytest.MonkeyPatch.context() as patch:
+        candidates_without_training(patch)
         patch.setattr(cord, "_iter_rows", lambda path, *a, **k: (opened.append(Path(path).name), real(path, *a, **k))[1])
         result = launch.fit_model(ctx)
     OPENED[ctx.cfg.project_root] = opened
