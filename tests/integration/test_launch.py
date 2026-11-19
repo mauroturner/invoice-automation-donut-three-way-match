@@ -111,14 +111,20 @@ def test_a_registered_model_with_no_seal_is_an_error_and_another_configuration_i
     assert after.mode == "verify" and after.seal == "post_seal" and next(r for r in after.rules if r.rule_id == "M03").passed is False
 
 
-def test_no_candidate_that_keeps_cord_stops_the_launch_and_writes_nothing(tmp_path, monkeypatch):
+def test_no_candidate_that_keeps_cord_stops_the_launch_writes_no_model_and_keeps_the_candidate_epochs(tmp_path, monkeypatch):
+    """R5, and A7 of the evaluation (D62): the choice fails after the whole fit, so the candidate epochs are kept, each a sealed folder, in a folder of their own that the error names; no
+    artifact, no registry row and no seal are written."""
     ctx = context(tmp_path)
     figures = iter([90.0, 10.0, 20.0])         # the checkpoint, then the two candidates: both lose more than the tolerance
     monkeypatch.setattr(launch, "cord_ted", lambda *a, **k: next(figures))
     monkeypatch.setattr(launch, "exact_rate", lambda *a, **k: 0.5)
-    with pytest.raises(ModelChoiceError, match="R5"):
+    with pytest.raises(ModelChoiceError, match="R5") as caught:
         launch.fit_model(ctx)
-    assert_nothing_written(ctx)
+    models = Path(ctx.cfg.paths.models_dir)
+    kept = models / f".candidates-{RUN.run_key}"
+    assert sorted(p.name for p in models.iterdir()) == [kept.name] and kept.name in str(caught.value)
+    assert sorted(p.name for p in kept.iterdir()) == ["epoch-1", "epoch-2"] and all(verify_artifact(f, launch.seal_folder_hash(f)) for f in kept.iterdir())
+    assert not Path(ctx.cfg.paths.seal).exists() and ctx.conn.execute("SELECT count(*) FROM model_registry").fetchone()[0] == 0
 
 
 def test_a_rule_that_is_not_what_the_generator_planted_stops_the_launch_before_the_fit(tmp_path, monkeypatch):
@@ -187,3 +193,21 @@ def assert_nothing_written(ctx, *, seal_kept: bool = False):
     models = Path(ctx.cfg.paths.models_dir)
     assert Path(ctx.cfg.paths.seal).exists() == seal_kept and ctx.conn.execute("SELECT count(*) FROM model_registry").fetchone()[0] == 0
     assert not models.exists() or not any(models.iterdir()), "no artifact and no scratch is left"
+
+
+def test_a_seal_that_cannot_be_written_leaves_no_registry_row_and_no_artifact_and_the_launch_can_run_again(tmp_path, monkeypatch):
+    """A5 of the evaluation (U14/W1, D62): the seal is written before the model is registered, so a seal that fails to be written leaves nothing behind, and the next launch is a launch."""
+    ctx = context(tmp_path)
+    real = launch.write_launch_seal
+
+    def full_disk(*args, **kwargs):
+        raise OSError(28, "No space left on device (simulated)")
+
+    monkeypatch.setattr(launch, "write_launch_seal", full_disk)
+    with pytest.raises(OSError, match="No space"):
+        launch.fit_model(ctx)
+    assert_nothing_written(ctx)
+    monkeypatch.setattr(launch, "write_launch_seal", real)
+    again = launch.fit_model(ctx)
+    assert again.mode == "launch" and again.seal == "written" and read_registry(ctx.conn)["artifact_sha256"] == again.artifact_sha256
+

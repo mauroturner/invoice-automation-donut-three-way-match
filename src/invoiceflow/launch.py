@@ -42,7 +42,7 @@ from invoiceflow.intake import load_page
 from invoiceflow.metrics import exact_lines, ted_accuracy
 from invoiceflow.model import extractors
 from invoiceflow.model.artifact import seal_folder, verify_artifact
-from invoiceflow.model.choose import Candidate, Choice, choose
+from invoiceflow.model.choose import Candidate, Choice, ModelChoiceError, choose
 from invoiceflow.model.serialize import check_block_sizes, invoice_target, json2token
 from invoiceflow.model.train import build_train_set, fine_tune, load_base, prepare_tokens
 from invoiceflow.normalize import normalize
@@ -227,6 +227,24 @@ def fit_model(ctx: LaunchContext) -> LaunchResult:
     return _launch(ctx, view)
 
 
+def _registry_row(trained_as_of: str, artifact_name: str, artifact_sha256: str, tokenizer_sha256: str, config_sha256: str, chosen_epoch: int, figures: Mapping[str, Any],
+                  digest: str) -> dict[str, Any]:
+    return {"model_version": MODEL_VERSION, "trained_as_of": trained_as_of, "artifact_name": artifact_name, "artifact_sha256": artifact_sha256, "tokenizer_sha256": tokenizer_sha256,
+            "config_sha256": config_sha256, "chosen_epoch": chosen_epoch, "choice_json": json.dumps(figures, sort_keys=True, ensure_ascii=False), "validation_digest": digest}
+
+
+def _keep_candidates(candidates: Path, models_dir: Path, run: RunMeta) -> Path:
+    """The candidate epochs of a launch whose choice failed, moved out of the scratch folder that the launch deletes (A7 of the evaluation, D62): ``.candidates-<run_key>`` beside the artifacts."""
+    target = models_dir / f".candidates-{run.run_key}"
+    n = 1
+    while target.exists():
+        n += 1
+        target = models_dir / f".candidates-{run.run_key}-{n}"
+    os.replace(candidates, target)
+    logger.error("fit_model: the choice failed; the candidate epochs are kept in %s", target.name)
+    return target
+
+
 def _verify(ctx: LaunchContext, view: SealedConfig, row: Mapping[str, Any]) -> LaunchResult:
     folder = Path(ctx.cfg.paths.models_dir) / row["artifact_name"]
     verify_artifact(folder, row["artifact_sha256"])                                                   # M02: the hashes, before a weight is read
@@ -308,7 +326,12 @@ def _launch(ctx: LaunchContext, view: SealedConfig) -> LaunchResult:
             candidates.append(Candidate(epoch, ted, exact_rate(extractor, truths["validation_known"], synth_page), exact_rate(extractor, truths["validation_new"], synth_page)))
             del extractor
             _free()
-        choice = choose(candidates, checkpoint_ted, view)                                              # M04
+        try:
+            choice = choose(candidates, checkpoint_ted, view)                                          # M04
+        except ModelChoiceError as error:
+            kept = _keep_candidates(work / "candidates", models_dir, ctx.run)
+            raise ModelChoiceError(f"{error} Las épocas candidatas quedaron en {models_dir.name}/{kept.name}, cada una con su manifiesto de huellas: ninguna se registró ni se selló; "
+                                   "se pueden mirar o borrar a mano (docs/runbook.md, R5)") from error
         chosen = work / "candidates" / f"epoch-{choice.epoch}"
         sealed = verify_artifact(chosen, seal_folder_hash(chosen))
         figures = {"choice": choice.to_jsonable(), "checkpoint_cord_val": {"ted": checkpoint_ted, "receipts": len(validation_receipts), "fit_splits": CHECKPOINT_SPLITS},
@@ -318,16 +341,13 @@ def _launch(ctx: LaunchContext, view: SealedConfig) -> LaunchResult:
         outcome = launch_seal_outcome(seal_path, document)                                              # decided before anything is written
         os.replace(chosen, final)
         try:
-            register_model(ctx.conn, {"model_version": MODEL_VERSION, "trained_as_of": _stamp(ctx.run), "artifact_name": artifact_name, "artifact_sha256": sealed.sha256,
-                                      "tokenizer_sha256": sealed.tokenizer_sha256, "config_sha256": config_sha256, "chosen_epoch": choice.epoch,
-                                      "choice_json": json.dumps(figures, sort_keys=True, ensure_ascii=False), "validation_digest": digest})
-            if outcome == "written":
-                outcome = write_launch_seal(seal_path, document)
-            elif outcome == "post_seal":
-                outcome = write_launch_seal(seal_path, document)      # logs the keys that differ and leaves the seal as it is
+            if outcome in ("written", "post_seal"):
+                outcome = write_launch_seal(seal_path, document)      # with post_seal: logs the keys that differ and leaves the seal as it is
         except BaseException:
-            shutil.rmtree(final, ignore_errors=True)
+            shutil.rmtree(final, ignore_errors=True)                  # nothing is sealed and nothing is registered: the next launch is a launch
             raise
+        # the seal first, the registry after (A5 of the evaluation, D62): a seal that fails to be written leaves no registry row behind
+        register_model(ctx.conn, _registry_row(_stamp(ctx.run), artifact_name, sealed.sha256, sealed.tokenizer_sha256, config_sha256, choice.epoch, figures, digest))
     finally:
         shutil.rmtree(work, ignore_errors=True)
     rules = [_result("M04", True, chosen_epoch=choice.epoch, floor=choice.floor), _result("M05", True), _result("M06", True, **oracle_figures)]
