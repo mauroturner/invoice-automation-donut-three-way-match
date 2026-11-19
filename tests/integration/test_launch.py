@@ -35,6 +35,18 @@ def context(root: Path, **overrides):
     return launch.LaunchContext(cfg=cfg, conn=conn, run=RUN, observed=check_sources(cfg), cord_index=cord.read_index(cfg), **overrides)
 
 
+def candidates_without_training(monkeypatch):
+    """The tests whose figures are constants check what the launch writes and refuses, not what the fit learns: each candidate epoch is the untrained tiny model saved the way the fit saves
+    it (``train._save_candidate``), which skips the training steps and the pages they read."""
+    from invoiceflow.model import train
+
+    def save(items, processor, model, view, *, out_dir, on_epoch=None):
+        Path(out_dir).mkdir(parents=True, exist_ok=True)
+        return [train._save_candidate(model, processor, Path(out_dir), epoch) for epoch in view.model.candidate_epochs]
+
+    monkeypatch.setattr(launch, "fine_tune", save)
+
+
 @pytest.fixture(scope="module")
 def launched(tmp_path_factory):
     """The one full launch of the module (the tiny model reads every page it is measured on, so a launch costs seconds): the CORD files whose rows were opened are kept to say the test split was not."""
@@ -114,6 +126,7 @@ def test_a_registered_model_with_no_seal_is_an_error_and_another_configuration_i
 def test_no_candidate_that_keeps_cord_stops_the_launch_writes_no_model_and_keeps_the_candidate_epochs(tmp_path, monkeypatch):
     """R5, and A7 of the evaluation (D62): the choice fails after the whole fit, so the candidate epochs are kept, each a sealed folder, in a folder of their own that the error names; no
     artifact, no registry row and no seal are written."""
+    candidates_without_training(monkeypatch)
     ctx = context(tmp_path)
     figures = iter([90.0, 10.0, 20.0])         # the checkpoint, then the two candidates: both lose more than the tolerance
     monkeypatch.setattr(launch, "cord_ted", lambda *a, **k: next(figures))
@@ -156,6 +169,7 @@ def test_a_partition_of_another_size_stops_the_launch_before_anything_is_loaded(
 
 def test_the_same_configuration_with_other_figures_in_the_seal_is_refused_and_nothing_is_written(tmp_path, monkeypatch):
     """A clean warehouse, a seal of the same configuration whose figures are other ones (as a relaunch on a GPU that gave other figures would find): R7, and the artifact, the registry and the seal stay as they were."""
+    candidates_without_training(monkeypatch)
     from invoiceflow.registry import sealed_view
     from tests.fixtures.seals import write_full_seal
 
@@ -196,9 +210,12 @@ def assert_nothing_written(ctx, *, seal_kept: bool = False):
 
 
 def test_a_seal_that_cannot_be_written_leaves_no_registry_row_and_no_artifact_and_the_launch_can_run_again(tmp_path, monkeypatch):
-    """A5 of the evaluation (U14/W1, D62): the seal is written before the model is registered, so a seal that fails to be written leaves nothing behind, and the next launch is a launch."""
+    """A5 of the evaluation (U14/W1, D62): the seal is written before the model is registered, so a seal that fails to be written leaves nothing behind (no row, no artifact, no seal), and
+    the next run is a launch again, not a refusal. The figures of the candidates are constants (as in the tests above): what is checked is the order of the writes, not the measures."""
+    candidates_without_training(monkeypatch)
     ctx = context(tmp_path)
-    real = launch.write_launch_seal
+    monkeypatch.setattr(launch, "cord_ted", lambda *a, **k: 77.0)
+    monkeypatch.setattr(launch, "exact_rate", lambda *a, **k: 0.5)
 
     def full_disk(*args, **kwargs):
         raise OSError(28, "No space left on device (simulated)")
@@ -207,9 +224,8 @@ def test_a_seal_that_cannot_be_written_leaves_no_registry_row_and_no_artifact_an
     with pytest.raises(OSError, match="No space"):
         launch.fit_model(ctx)
     assert_nothing_written(ctx)
-    monkeypatch.setattr(launch, "write_launch_seal", real)
-    again = launch.fit_model(ctx)
-    assert again.mode == "launch" and again.seal == "written" and read_registry(ctx.conn)["artifact_sha256"] == again.artifact_sha256
+    monkeypatch.setattr(launch, "_launch", lambda context_, view: "launched again")
+    assert launch.fit_model(ctx) == "launched again", "no row, no seal and no artifact: the next run launches"
 
 
 def test_a_sealed_artifact_without_its_registry_row_is_registered_again_from_the_seal_and_nothing_is_fitted(launched, tmp_path, monkeypatch):
