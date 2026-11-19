@@ -193,7 +193,8 @@ def _post_seal_lines(analysis: Mapping[str, Any] | None) -> list[str]:
     if not analysis:
         return []
     return ["", "### Análisis posteriores al sello", "", "No reemplazan ninguna cifra sellada: se calcularon después del sello, sobre las mismas decisiones emitidas y la misma verdad sintética, y se "
-            "publican al lado de lo sellado (D59).", "", texts.c08_preregistered_line(dict(analysis))]
+            "publican al lado de lo sellado (D59).", "", texts.c08_preregistered_line(dict(analysis)),
+            *([texts.b1_read_order_line(dict(analysis))] if "b1_read_order" in analysis else [])]
 
 
 def summary_markdown(summary: Mapping[str, Any]) -> str:

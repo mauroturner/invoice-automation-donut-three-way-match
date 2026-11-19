@@ -138,3 +138,16 @@ def c08_preregistered_line(analysis: dict) -> str:
             f"cargas ({es(b1['rate'], 1, percent=True)}) y el flujo {flow['bad']} de {flow['posts']} ({es(flow['rate'], 1, percent=True)}); la diferencia de las tasas es {es(pre['value'] * 100, 1)} "
             f"puntos (intervalo del 95 %, {es(pre['ci_low'] * 100, 1)} a {es(pre['ci_high'] * 100, 1)}, remuestreo pareado por factura): {verdict} (sintético). El veredicto sellado de C08 no cambia; "
             "el texto sellado, que pone esas tasas por carga al lado de la diferencia por factura, queda en el sello y en el almacén.")
+
+
+def b1_read_order_line(analysis: dict) -> str:
+    """The line of the summary that tells B1 as D48 says, with the order number the model read (D60), from ``evaluation.post_seal_analysis``."""
+    read = analysis["b1_read_order"]
+    every, per_invoice, per_post = read["baselines"]["all"], read["c08_per_invoice"], read["c08_preregistered"]
+    if per_invoice["value"] is None or per_post["value"] is None:
+        return f"- **B1 con la orden que leyó el modelo** (D48, D60): carga {every['auto_post']} facturas y {every['bad_post']} mal; C08 no se puede calcular así (sintético)."
+    verdicts = ["se cumple" if p["passed"] else "no se cumple" for p in (per_invoice, per_post)]
+    return (f"- **B1 con la orden que leyó el modelo** (D48, D60; la B1 sellada tomó la orden de la verdad): carga {every['auto_post']} facturas y {every['bad_post']} mal "
+            f"({es(every['bad_post_rate'], 1, percent=True)} de sus cargas). C08 por factura, como el sello: {es(per_invoice['value'] * 100, 1)} puntos (intervalo del 95 %, "
+            f"{es(per_invoice['ci_low'] * 100, 1)} a {es(per_invoice['ci_high'] * 100, 1)}), {verdicts[0]}; por carga, como el preregistro: {es(per_post['value'] * 100, 1)} puntos "
+            f"({es(per_post['ci_low'] * 100, 1)} a {es(per_post['ci_high'] * 100, 1)}), {verdicts[1]} (sintético).")

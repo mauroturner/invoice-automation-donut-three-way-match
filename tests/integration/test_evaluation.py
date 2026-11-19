@@ -266,3 +266,9 @@ def test_b1_cites_the_order_number_the_model_read_and_the_sealed_b1_is_kept_besi
     assert per_invoice["b1_bad"] == read["baselines"]["all"]["bad_post"] and per_invoice["value"] == pytest.approx((per_invoice["b1_bad"] - flow_bad) / len(truths))
     assert per_post["b1"]["posts"] == read["baselines"]["all"]["auto_post"] and per_post["b1"]["bad"] == read["baselines"]["all"]["bad_post"]
     assert analysis["decisions"] == ["D59", "D60"] and analysis["c08_preregistered"]["b1"]["posts"] == sealed.figures["baselines"]["b1:all"]["auto_post"]
+    from invoiceflow import texts
+
+    line = texts.b1_read_order_line(analysis)
+    assert line.startswith("- **B1 con la orden que leyó el modelo** (D48, D60;") and f"{read['baselines']['all']['auto_post']} facturas" in line
+    assert texts.es(per_invoice["value"] * 100, 1) in line and texts.es(per_post["value"] * 100, 1) in line and "(sintético)" in line
+    assert line in reporting.summary_markdown({"source": "warehouse", "criteria": [], "post_seal_analysis": analysis})
