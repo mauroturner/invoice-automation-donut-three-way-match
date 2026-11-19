@@ -352,3 +352,23 @@ def test_the_numbers_of_a_run_are_its_decisions_and_by_reason_counts_only_the_re
     monkeypatch.setattr(pipeline, "run_all", lambda cfg, *args, **kwargs: [])
     body = client_of(by_hand.cfg).post("/runs", headers=BEARER).json()
     assert (body["run_key"], body["status"], body["invoices"], body["auto_post"], body["review"], body["by_reason"]) == ("r1", "ok", 3, 2, 1, {"qr_not_read": 1})
+
+
+def test_a_run_that_was_committed_is_answered_200_even_when_its_numbers_cannot_be_read_so_a_client_does_not_run_the_next_delivery(pipeline_launched, tmp_path, monkeypatch):
+    """A4 of the evaluation (L108, U20/W1; D63): the read after ``run_all`` failed and the answer was 503 although the run had been recorded ``ok``, so a client that retries a 503 ran the next
+    delivery. The run happened: the answer is 200 with its key, its status and its delivery, and the numbers it could not read are null (``GET /runs/<key>`` has them)."""
+    from invoiceflow import api
+
+    state = copy_state(pipeline_launched, tmp_path / "state")
+    client = client_of(state.cfg)
+    real = api._counts
+    monkeypatch.setattr(api, "_counts", lambda conn, run_key: (_ for _ in ()).throw(sqlite3.OperationalError("database is locked")))
+    posted = client.post("/runs", headers=BEARER)
+    body = posted.json()
+    assert posted.status_code == 200 and (body["status"], body["delivery_id"]) == ("ok", "D2026-10-01")
+    assert {k: body[k] for k in ("invoices", "auto_post", "review", "by_reason")} == {"invoices": None, "auto_post": None, "review": None, "by_reason": None}
+    assert set(body) == {"run_key", "status", "delivery_id", "invoices", "auto_post", "review", "by_reason"}, "the same body as a run whose numbers were read"
+    monkeypatch.setattr(api, "_counts", real)
+    row = client.get(f"/runs/{body['run_key']}", headers=BEARER).json()
+    assert (row["status"], row["delivery_id"]) == ("ok", "D2026-10-01") and row["invoices"] == len(decisions_of(state, "D2026-10-01")) > 0
+    assert [r[0] for r in sqlite3.connect(state.cfg.paths.warehouse).execute("SELECT delivery_id FROM deliveries WHERE kind = 'daily'")] == ["D2026-10-01"], "nothing ran twice"

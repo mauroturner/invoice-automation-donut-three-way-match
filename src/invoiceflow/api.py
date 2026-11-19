@@ -170,14 +170,20 @@ def create_app(cfg: PipelineConfig, env: Mapping[str, str] | None = None) -> Fas
         except Exception as error:   # a task failed: its record is in the state of the run and the traceback in this process' log, never in the answer
             logger.error("run %s failed", run_key, exc_info=error)
             return _error(500, "run_failed")
-        conn = _read_only(cfg)
+        delivered = next((step["result"].get("delivery_id") for step in outcome if step.get("task") == "deliver"), None)
+        ran = (outcome[-1]["result"].get("run_status") if outcome else None) or "ok"
         try:
-            row = _run_row(conn, run_key)
-            invoices, review, by_reason = _counts(conn, run_key)
-        finally:
-            if conn is not None:
-                conn.close()
-        status = row["status"] if row else ((outcome[-1]["result"].get("run_status") if outcome else None) or "ok")
+            conn = _read_only(cfg)
+            try:
+                row = _run_row(conn, run_key)
+                invoices, review, by_reason = _counts(conn, run_key)
+            finally:
+                if conn is not None:
+                    conn.close()
+        except sqlite3.Error as error:   # the run is committed: a 503 would make a client that retries run the next delivery (A4 of the evaluation, D63); the numbers are in GET /runs/<key>
+            logger.warning("run %s finished but its numbers could not be read: %s", run_key, error)
+            return _reply(200, {"run_key": run_key, "status": ran, "delivery_id": delivered, "invoices": None, "auto_post": None, "review": None, "by_reason": None})
+        status = row["status"] if row else ran
         return _reply(200, {"run_key": run_key, "status": status, "delivery_id": row["delivery_id"] if row else None, "invoices": invoices, "auto_post": invoices - review, "review": review,
                             "by_reason": by_reason})
 
