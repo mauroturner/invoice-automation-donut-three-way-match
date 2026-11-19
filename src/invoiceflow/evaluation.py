@@ -327,22 +327,28 @@ def _field_rows(conn: Any, by_split: Mapping[str, Sequence[Mapping[str, Any]]]) 
 # --- CORD's test split: the one opening ---------------------------------------------------------------------------------------------------
 
 
-def evaluate_cord(cfg: PipelineConfig, view: SealedConfig, chosen: Any, checkpoint: Any, *, closing_run: bool) -> tuple[dict[str, Any], list[dict[str, Any]]]:
+def evaluate_cord(cfg: PipelineConfig, view: SealedConfig, chosen: Any, checkpoint: Any, *, closing_run: bool,
+                  predictions: list[dict[str, Any]] | None = None) -> tuple[dict[str, Any], list[dict[str, Any]]]:
     """The chosen model and the checkpoint over the receipts of CORD's ``test`` split, with the CORD task's prompt (each argument has ``extract(image) -> tree``), the TED by receipt and the
     difference paired by receipt with its interval (C01). **The only function that opens the split** (``cord.read_split`` refuses any other caller and any run that is not the closing one).
-    Returns the figures for ``criteria_of`` and the rows of ``eval_cord``."""
+    Returns the figures for ``criteria_of`` and the rows of ``eval_cord``; given a list as `predictions`, it appends to it, for each receipt, its truth and the tree each model read, so the TED can be
+    recomputed without reading the split again (A10 of the evaluation, D63)."""
     chosen_ted: list[float] = []
     checkpoint_ted: list[float] = []
     rows: list[dict[str, Any]] = []
     for receipt in read_split(cfg, "test", closing_run=closing_run):
         with Image.open(io.BytesIO(receipt.image_bytes)) as opened:
             page = opened.convert("RGB")
+        read: dict[str, Any] = {"receipt_key": receipt.receipt_key, "truth": receipt.gt_parse}
         for name, model, bucket in (("chosen", chosen, chosen_ted), ("checkpoint", checkpoint, checkpoint_ted)):
             tree = model.extract(page)
+            read[name] = tree
             ted = 100.0 * metrics.ted_accuracy(tree, receipt.gt_parse)
             matched, leaves, _ = metrics.leaf_match(tree, receipt.gt_parse)
             bucket.append(ted)
             rows.append({"model": name, "receipt_key": receipt.receipt_key, "ted": ted, "leaves": leaves, "matched": matched})
+        if predictions is not None:
+            predictions.append(read)
     n = len(chosen_ted)
     value, low, high = metrics.paired_difference(chosen_ted, checkpoint_ted, resamples=view.evaluation.resamples, seed=view.evaluation.seed)
     figures = {"receipts": n, "ted_chosen": sum(chosen_ted) / n if n else None, "ted_checkpoint": sum(checkpoint_ted) / n if n else None,

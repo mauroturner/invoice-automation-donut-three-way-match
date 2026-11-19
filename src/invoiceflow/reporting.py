@@ -29,6 +29,7 @@ from invoiceflow.synth.master import Master
 logger = logging.getLogger(__name__)
 
 POST_SEAL_FILE = "post_seal_analysis.json"
+CORD_PREDICTIONS_FILE = "cord_test_predictions.json"
 CRITERION_COLUMNS = ("criterion_id", "name_es", "value", "baseline_value", "ci_low", "ci_high", "threshold_es", "passed", "seen_by_research", "seen_by_planner", "synthetic", "verdict_es")
 
 
@@ -78,7 +79,8 @@ def evaluate(conn: sqlite3.Connection, cfg: PipelineConfig, view: SealedConfig, 
     """The task ``evaluate`` of the close: the test is evaluated **once**. The state of the seal is decided first (``EvaluationRefusedError`` before anything is read or written); then CORD's test split is
     opened by ``evaluation.evaluate_cord``, the synthetic test is joined to what was issued, the rows are stored and the test part of the seal is written (or reproduced)."""
     state = check_test_evaluation(seal_path, view)
-    cord_figures, cord_rows = evaluation.evaluate_cord(cfg, view, chosen, checkpoint, closing_run=closing_run)
+    predictions: list[dict[str, Any]] = []
+    cord_figures, cord_rows = evaluation.evaluate_cord(cfg, view, chosen, checkpoint, closing_run=closing_run, predictions=predictions)
     result = evaluation.evaluate_test(conn, view, master, truths, repeat_new=repeat_new, checkpoint_trees=checkpoint_trees, cord=cord_figures)
     criteria = evaluation.evaluate_criteria(result, view)
     rows = store_result(conn, result, criteria, cord_rows, state)
@@ -90,6 +92,7 @@ def evaluate(conn: sqlite3.Connection, cfg: PipelineConfig, view: SealedConfig, 
     logger.info("evaluate: state %s, seal %s, rows %s", state, outcome, rows)
     if state in ("first", "repeat"):
         write_post_seal_analysis(seal_path, evaluation.post_seal_analysis(conn, view, master, truths), config_fingerprint(view))
+        write_cord_predictions(seal_path, predictions)
     return {"state": state, "seal": outcome, "criteria": criteria, "rows": rows, "result": result}
 
 
@@ -102,6 +105,15 @@ def write_post_seal_analysis(seal_path: Path, analysis: Mapping[str, Any], confi
     """Write the analyses after the seal (atomically), bound to the bytes of the seal they were computed beside: a repetition rewrites the same file and the seal is never touched."""
     document = {**analysis, "config_sha256": config_sha256, "seal_sha256": hashlib.sha256(Path(seal_path).read_bytes()).hexdigest()}
     return write_atomic(post_seal_path(seal_path), json.dumps(document, indent=1, ensure_ascii=False, sort_keys=True) + "\n")
+
+
+def write_cord_predictions(seal_path: Path, predictions: Sequence[Mapping[str, Any]]) -> Path:
+    """The trees the chosen model and the checkpoint read on each receipt of CORD's test at the close, with the receipt's truth, beside the seal (A10 of the evaluation, D63): CORD's receipts are
+    real (``synthetic`` false) and carry their attribution."""
+    from invoiceflow.labels import ATTRIBUTION
+
+    document = {"synthetic": False, "attribution": ATTRIBUTION, "receipts": [dict(p) for p in predictions]}
+    return write_atomic(Path(seal_path).with_name(CORD_PREDICTIONS_FILE), json.dumps(document, indent=1, ensure_ascii=False, sort_keys=True) + "\n")
 
 
 def read_post_seal_analysis(seal_path: Path) -> dict[str, Any] | None:
@@ -230,5 +242,5 @@ def replace_block(text: str, name: str, start: str, end: str, content: str) -> s
     return text[: first + len(start)] + "\n" + content.strip("\n") + "\n" + text[last:]
 
 
-__all__ = ["POST_SEAL_FILE", "RESULTS_END", "RESULTS_START", "build_summary", "close_day", "evaluate", "pending_criteria", "post_seal_path", "read_post_seal_analysis", "replace_block",
-           "store_result", "summary_markdown", "write_post_seal_analysis", "write_summary"]
+__all__ = ["CORD_PREDICTIONS_FILE", "POST_SEAL_FILE", "RESULTS_END", "RESULTS_START", "build_summary", "close_day", "evaluate", "pending_criteria", "post_seal_path", "read_post_seal_analysis", "replace_block",
+           "store_result", "summary_markdown", "write_cord_predictions", "write_post_seal_analysis", "write_summary"]
