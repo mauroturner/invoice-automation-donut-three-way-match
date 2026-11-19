@@ -128,7 +128,8 @@ def threshold_figure(criterion: dict) -> str:
 
 
 def c08_preregistered_line(analysis: dict) -> str:
-    """The line of the summary that tells C08 as requirements 8.1 define it, from ``evaluation.post_seal_analysis``."""
+    """The line of the summary that tells C08 as requirements 8.1 define it, from ``evaluation.post_seal_analysis``. Its interval is written «de A a B», never as the sealed C08's
+    «intervalo del 95 %, A a B», so that a reader (and ``tests/docs``) never takes it for the sealed one."""
     pre = analysis["c08_preregistered"]
     b1, flow = pre["b1"], pre["flow"]
     if pre["value"] is None:
@@ -136,7 +137,7 @@ def c08_preregistered_line(analysis: dict) -> str:
     verdict = "se cumple también así" if pre["passed"] else "así no se cumple"
     return (f"- **C08 como lo fija el preregistro** (requirements, sección 8.1: la tasa de carga mala es cargas malas sobre facturas con `auto_post`): B1 cargó mal {b1['bad']} de sus {b1['posts']} "
             f"cargas ({es(b1['rate'], 1, percent=True)}) y el flujo {flow['bad']} de {flow['posts']} ({es(flow['rate'], 1, percent=True)}); la diferencia de las tasas es {es(pre['value'] * 100, 1)} "
-            f"puntos (intervalo del 95 %, {es(pre['ci_low'] * 100, 1)} a {es(pre['ci_high'] * 100, 1)}, remuestreo pareado por factura): {verdict} (sintético). El veredicto sellado de C08 no cambia; "
+            f"puntos, con un intervalo del 95 % de {es(pre['ci_low'] * 100, 1)} a {es(pre['ci_high'] * 100, 1)} (remuestreo pareado por factura): {verdict} (sintético). El veredicto sellado de C08 no cambia; "
             "el texto sellado, que pone esas tasas por carga al lado de la diferencia por factura, queda en el sello y en el almacén.")
 
 
@@ -148,6 +149,6 @@ def b1_read_order_line(analysis: dict) -> str:
         return f"- **B1 con la orden que leyó el modelo** (D48, D60): carga {every['auto_post']} facturas y {every['bad_post']} mal; C08 no se puede calcular así (sintético)."
     verdicts = ["se cumple" if p["passed"] else "no se cumple" for p in (per_invoice, per_post)]
     return (f"- **B1 con la orden que leyó el modelo** (D48, D60; la B1 sellada tomó la orden de la verdad): carga {every['auto_post']} facturas y {every['bad_post']} mal "
-            f"({es(every['bad_post_rate'], 1, percent=True)} de sus cargas). C08 por factura, como el sello: {es(per_invoice['value'] * 100, 1)} puntos (intervalo del 95 %, "
+            f"({es(every['bad_post_rate'], 1, percent=True)} de sus cargas). C08 por factura, como el sello: {es(per_invoice['value'] * 100, 1)} puntos (intervalo del 95 % de "
             f"{es(per_invoice['ci_low'] * 100, 1)} a {es(per_invoice['ci_high'] * 100, 1)}), {verdicts[0]}; por carga, como el preregistro: {es(per_post['value'] * 100, 1)} puntos "
             f"({es(per_post['ci_low'] * 100, 1)} a {es(per_post['ci_high'] * 100, 1)}), {verdicts[1]} (sintético).")
