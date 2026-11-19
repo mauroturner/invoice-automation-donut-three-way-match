@@ -21,8 +21,8 @@ Cada cifra marcada (sintético) sale de facturas que genera este proyecto.
 
 No reemplazan ninguna cifra sellada: se calcularon después del sello, sobre las mismas decisiones emitidas y la misma verdad sintética, y se publican al lado de lo sellado (D59).
 
-- **C08 como lo fija el preregistro** (requirements, sección 8.1: la tasa de carga mala es cargas malas sobre facturas con `auto_post`): B1 cargó mal 46 de sus 197 cargas (23,4 %) y el flujo 0 de 147 (0,0 %); la diferencia de las tasas es 23,4 puntos (intervalo del 95 %, 17,5 a 29,8, remuestreo pareado por factura): se cumple también así (sintético). El veredicto sellado de C08 no cambia; el texto sellado, que pone esas tasas por carga al lado de la diferencia por factura, queda en el sello y en el almacén.
-- **B1 con la orden que leyó el modelo** (D48, D60; la B1 sellada tomó la orden de la verdad): carga 189 facturas y 41 mal (21,7 % de sus cargas). C08 por factura, como el sello: 6,8 puntos (intervalo del 95 %, 5,0 a 9,0), se cumple; por carga, como el preregistro: 21,7 puntos (16,0 a 28,0), se cumple (sintético).
+- **C08 como lo fija el preregistro** (requirements, sección 8.1: la tasa de carga mala es cargas malas sobre facturas con `auto_post`): B1 cargó mal 46 de sus 197 cargas (23,4 %) y el flujo 0 de 147 (0,0 %); la diferencia de las tasas es 23,4 puntos, con un intervalo del 95 % de 17,5 a 29,8 (remuestreo pareado por factura): se cumple también así (sintético). El veredicto sellado de C08 no cambia; el texto sellado, que pone esas tasas por carga al lado de la diferencia por factura, queda en el sello y en el almacén.
+- **B1 con la orden que leyó el modelo** (D48, D60; la B1 sellada tomó la orden de la verdad): carga 189 facturas y 41 mal (21,7 % de sus cargas). C08 por factura, como el sello: 6,8 puntos (intervalo del 95 % de 5,0 a 9,0), se cumple; por carga, como el preregistro: 21,7 puntos (16,0 a 28,0), se cumple (sintético).
 
 Cifras de la validación (no son la prueba; cada una dice con qué se ajustó su modelo):
 
