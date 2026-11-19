@@ -220,3 +220,71 @@ def test_the_stub_reads_the_truth_by_the_page_and_seeds_the_errors_it_is_told_to
         else:
             assert fields.lines[0].importe is None and "lines[0].importe" in fields.missing
     assert normalize(stub.extract(Image.new("RGB", (9, 9)))).complete is False, "a page it does not know is read as nothing"
+
+
+class BatchTensor:
+    """What the fakes pass for a batch: its label, its rows and where it went."""
+
+    def __init__(self, label, rows=1):
+        self.label, self.rows = label, rows
+
+    def to(self, device):
+        return BatchTensor(f"{self.label}@{device}", self.rows)
+
+    def repeat(self, rows, columns):
+        assert columns == 1
+        return BatchTensor(self.label, self.rows * rows)
+
+
+class BatchTokenizer(FakeTokenizer):
+    def __call__(self, text, add_special_tokens, return_tensors):
+        self.calls.append((text, add_special_tokens, return_tensors))
+        return types.SimpleNamespace(input_ids=BatchTensor("prompt"))
+
+    def batch_decode(self, sequences):
+        return list(sequences)
+
+
+class BatchProcessor(FakeProcessor):
+    def __init__(self):
+        super().__init__()
+        self.tokenizer = BatchTokenizer()
+
+    def __call__(self, images, return_tensors):
+        images = images if isinstance(images, list) else [images]
+        self.seen.append([(image.mode, image.size) for image in images])
+        return types.SimpleNamespace(pixel_values=BatchTensor("pixels", len(images)))
+
+
+class BatchModel:
+    """Answers each page by its width, so the order of the trees can be checked; a shorter sequence is padded after its end, as a batch is."""
+
+    def __init__(self, processor):
+        self.processor, self.calls = processor, []
+
+    def generate(self, pixel_values, **kwargs):
+        self.calls.append({"pixel_values": pixel_values, **kwargs})
+        widths = [size[0] for _, size in self.processor.seen[-1]]
+        return types.SimpleNamespace(sequences=[f"<s_cord-v2><s_nm>{w}</s_nm></s>" + "<pad>" * (5 - len(str(w))) for w in widths])
+
+
+def test_many_pages_are_read_in_batches_with_the_generation_of_one_page_and_in_their_order():
+    """D61 (B4 of the evaluation): the checkpoint's pass of B2 reads the pages a batch at a time; each batch has one prompt per page and the generation of ``extract``, and the trees come back in
+    the order of the pages, with the padding after a shorter sequence cut as ``extract`` cuts it."""
+    processor = BatchProcessor()
+    model = BatchModel(processor)
+    extractor = DonutExtractor(model=model, processor=processor, task_token="<s_cord-v2>", max_length=768, device="cuda", model_version="checkpoint", no_grad=contextlib.nullcontext)
+    pages = [Image.new("L", (w, 30)) for w in (11, 222, 33, 4, 55)]
+    trees = extractor.extract_many(pages, batch_size=2)
+    assert trees == [{"nm": "11"}, {"nm": "222"}, {"nm": "33"}, {"nm": "4"}, {"nm": "55"}]
+    assert [len(batch) for batch in processor.seen] == [2, 2, 1] and all(mode == "RGB" for batch in processor.seen for mode, _ in batch)
+    assert [(c["pixel_values"].rows, c["decoder_input_ids"].rows, c["decoder_input_ids"].label) for c in model.calls] == [(2, 2, "prompt@cuda"), (2, 2, "prompt@cuda"), (1, 1, "prompt@cuda")]
+    one = {k: v for k, v in model.calls[0].items() if k not in ("pixel_values", "decoder_input_ids")}
+    assert one == {"max_length": 768, "early_stopping": True, "pad_token_id": 1, "eos_token_id": 2, "use_cache": True, "num_beams": 1, "bad_words_ids": [[3]], "return_dict_in_generate": True}
+    single, single_processor, single_model = donut(task_token="<s_cord-v2>")
+    single_processor.tokenizer.sequence = "<s_cord-v2><s_nm>11</s_nm></s>"
+    assert single.extract(pages[0]) == trees[0]
+    assert {k: v for k, v in single_model.kwargs.items() if k not in ("pixel_values", "decoder_input_ids")} == one, "the same generation as one page"
+    assert extractor.extract_many([], batch_size=2) == []
+    with pytest.raises(ValueError, match="batch_size"):
+        extractor.extract_many(pages, batch_size=0)

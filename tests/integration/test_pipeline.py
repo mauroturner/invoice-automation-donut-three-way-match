@@ -251,3 +251,49 @@ def test_the_export_task_gives_the_site_the_smoke_result_that_is_in_the_reports_
     (paths.reports_dir / SMOKE_FILE).write_text("{}", encoding="utf-8")
     with pytest.raises(SiteExportError):
         pipeline.export(ctx)
+
+
+class _PagesByPixels:
+    """A checkpoint of the tests: the tree of a page is a digest of its pixels; it counts how it was asked."""
+
+    def __init__(self, many: bool):
+        self.batches: list[tuple[int, int]] = []
+        self.single = 0
+        if not many:
+            self.extract_many = None
+
+    @staticmethod
+    def tree(image):
+        import hashlib
+
+        return {"menu": {"nm": hashlib.sha256(image.convert("RGB").tobytes()).hexdigest()[:16]}}
+
+    def extract(self, image):
+        self.single += 1
+        return self.tree(image)
+
+    def extract_many(self, images, batch_size):      # noqa: F811 (a checkpoint without it sets the attribute to None)
+        self.batches.append((len(images), batch_size))
+        return [self.tree(image) for image in images]
+
+
+def test_the_checkpoint_reads_the_test_pages_in_batches_with_the_trees_of_one_page_at_a_time(pipeline_replayed, quick_view, tmp_path):
+    """D61 (B4 of the evaluation): B2's pass of the checkpoint over the test pages asks a batch of ``CHECKPOINT_BATCH`` pages at a time when the checkpoint reads batches, with the trees of each
+    page what reading it alone gives; a checkpoint that reads one page at a time (the quick mode's) is asked page by page, and a page without its file has no tree."""
+    from invoiceflow import evaluation
+    from invoiceflow.deliveries import delivery_plan
+
+    state = pipeline_replayed
+    days = [s.delivery_id for s in delivery_plan(quick_view) if s.kind == "daily"]
+    truths = evaluation.load_test_truths(Path(state.cfg.paths.interim_dir), days)
+    batched, alone = _PagesByPixels(many=True), _PagesByPixels(many=False)
+    trees = pipeline.checkpoint_trees(state.cfg, batched, truths, quick_view)
+    assert trees == pipeline.checkpoint_trees(state.cfg, alone, truths, quick_view) and list(trees) == [t.invoice_key for t in truths]
+    assert alone.single == len(truths) and batched.single == 0 and alone.batches == []
+    size = pipeline.CHECKPOINT_BATCH
+    assert batched.batches == [(min(size, len(truths) - i), size) for i in range(0, len(truths), size)] and size == 8
+    gone = copy_state(state, tmp_path / "state")
+    victim = truths[0]
+    next(p for p in (Path(gone.cfg.paths.raw_dir) / "deliveries" / f"D{victim.received_on.isoformat()}" / "inbox").iterdir() if p.stem == victim.invoice_key).unlink()
+    without = pipeline.checkpoint_trees(gone.cfg, _PagesByPixels(many=True), truths, quick_view)
+    assert without[victim.invoice_key] == {} and {k: v for k, v in without.items() if k != victim.invoice_key} == {k: v for k, v in trees.items() if k != victim.invoice_key}

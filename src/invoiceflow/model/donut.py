@@ -8,7 +8,7 @@ generated sequence into the tree: it cuts the prompt of the task and the end and
 
 from __future__ import annotations
 
-from collections.abc import Callable, Mapping
+from collections.abc import Callable, Mapping, Sequence
 from pathlib import Path
 from typing import Any
 
@@ -53,17 +53,37 @@ class DonutExtractor:
         tokenizer = self.processor.tokenizer
         pixel_values = self.processor(image.convert("RGB"), return_tensors="pt").pixel_values.to(self.device)
         prompt = tokenizer(self.task_token, add_special_tokens=False, return_tensors="pt").input_ids.to(self.device)
+        sequence = tokenizer.batch_decode(self._generate(pixel_values, prompt).sequences)[0]
+        return parse_generation(sequence, self.task_token, tokenizer.eos_token, tokenizer.pad_token)
+
+    def extract_many(self, images: Sequence[Image.Image], batch_size: int) -> list[RawFields]:
+        """The tree of each page of `images`, in order, read `batch_size` pages at a time with the same greedy generation as ``extract``: every page is resized to ``input_size`` and gets the same
+        prompt, so nothing is padded on the way in, and a sequence that ends before the others of its batch is padded after its end token, which ``parse_generation`` cuts. For many pages read
+        with one model (the checkpoint's pass of B2 at the close, D61); on the 600 pages of the test the trees are the ones ``extract`` gives page by page."""
+        if batch_size < 1:
+            raise ValueError(f"extract_many: batch_size={batch_size}; se esperaba 1 o más")
+        tokenizer = self.processor.tokenizer
+        trees: list[RawFields] = []
+        for start in range(0, len(images), batch_size):
+            group = [image.convert("RGB") for image in images[start:start + batch_size]]
+            pixel_values = self.processor(group, return_tensors="pt").pixel_values.to(self.device)
+            prompt = tokenizer(self.task_token, add_special_tokens=False, return_tensors="pt").input_ids.to(self.device).repeat(len(group), 1)
+            for sequence in tokenizer.batch_decode(self._generate(pixel_values, prompt).sequences):
+                trees.append(parse_generation(sequence, self.task_token, tokenizer.eos_token, tokenizer.pad_token))
+        return trees
+
+    def _generate(self, pixel_values: Any, prompt: Any) -> Any:
+        """One greedy generation (``num_beams = 1``) from `prompt`, at most ``max_length`` tokens, without gradients."""
+        tokenizer = self.processor.tokenizer
         no_grad = self._no_grad
         if no_grad is None:
             import torch
 
             no_grad = torch.no_grad
         with no_grad():
-            output = self.model.generate(
+            return self.model.generate(
                 pixel_values, decoder_input_ids=prompt, max_length=self.max_length, early_stopping=True, pad_token_id=tokenizer.pad_token_id,
                 eos_token_id=tokenizer.eos_token_id, use_cache=True, num_beams=1, bad_words_ids=[[tokenizer.unk_token_id]], return_dict_in_generate=True)
-        sequence = tokenizer.batch_decode(output.sequences)[0]
-        return parse_generation(sequence, self.task_token, tokenizer.eos_token, tokenizer.pad_token)
 
 
 def load_donut(view: SealedConfig, registry_row: Mapping[str, Any], models_dir: Path) -> DonutExtractor:

@@ -572,16 +572,25 @@ def _closing_models(ctx: RunContext, view: SealedConfig):
     return _cord_twin(chosen, view), _checkpoint_extractor(view, processor, model)
 
 
-def _checkpoint_trees(ctx: RunContext, checkpoint: Any, truths: list, view: SealedConfig) -> dict[str, Any]:
-    """B2 needs the tree the unadjusted checkpoint reads on each test page (D53): one pass over the inbox files, asked with the CORD task."""
-    from invoiceflow.baselines import cord_tree_to_raw  # noqa: F401  (B2 turns the tree itself)
+CHECKPOINT_BATCH = 8       # pages per generation in B2's pass of the checkpoint (D61): a constant of the code, outside the seal; the trees are the ones of one page at a time
 
-    trees: dict[str, Any] = {}
+
+def checkpoint_trees(cfg: PipelineConfig, checkpoint: Any, truths: list, view: SealedConfig) -> dict[str, Any]:
+    """B2 needs the tree the unadjusted checkpoint reads on each test page (D53): one pass over the inbox files, asked with the CORD task, by invoice key in the order of `truths`. A checkpoint
+    that reads batches (``extract_many``, the real one) is asked ``CHECKPOINT_BATCH`` pages at a time, which takes the pass of the close from about 1,030 s to about 250 s on this machine with the
+    same trees (D61); one that reads a page at a time is asked page by page. A page without its file has no tree (``{}``)."""
+    paths = {}
     for truth in truths:
-        folder = _inbox(ctx.cfg, f"D{truth.received_on.isoformat()}")
-        path = next((p for p in (folder / f"{truth.invoice_key}{ext}" for ext in EXTENSIONS.values()) if p.is_file()), None)
-        trees[truth.invoice_key] = checkpoint.extract(load_page(path, view)) if path is not None else {}
-    return trees
+        folder = _inbox(cfg, f"D{truth.received_on.isoformat()}")
+        paths[truth.invoice_key] = next((p for p in (folder / f"{truth.invoice_key}{ext}" for ext in EXTENSIONS.values()) if p.is_file()), None)
+    found = [key for key, path in paths.items() if path is not None]
+    many = getattr(checkpoint, "extract_many", None)
+    read: dict[str, Any] = {}
+    for start in range(0, len(found), CHECKPOINT_BATCH):
+        keys = found[start:start + CHECKPOINT_BATCH]
+        pages = [load_page(paths[key], view) for key in keys]
+        read.update(zip(keys, many(pages, CHECKPOINT_BATCH) if callable(many) else [checkpoint.extract(page) for page in pages], strict=True))
+    return {key: read.get(key, {}) for key in paths}
 
 
 def _repeat_last_day(ctx: RunContext, view: SealedConfig, last: DeliverySpec) -> int | None:
@@ -624,7 +633,7 @@ def evaluate(ctx: RunContext) -> dict:
     truths = evaluation.load_test_truths(cfg.paths.interim_dir, [s.delivery_id for s in days])
     chosen, checkpoint = _closing_models(ctx, view)
     repeat_new = _repeat_last_day(ctx, view, days[-1])
-    trees = _checkpoint_trees(ctx, checkpoint, truths, view)
+    trees = checkpoint_trees(cfg, checkpoint, truths, view)
     conn = connect(cfg.paths.warehouse)
     try:
         try:
