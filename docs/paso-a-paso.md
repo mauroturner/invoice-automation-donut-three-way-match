@@ -75,15 +75,22 @@ Agentes con Sonnet escribieron U01 a U22 (menos la unidad de velocidad, de Opus)
 
 ## 7. Las revisiones de U22 (L110)
 
-La revisión nativa leyó lo escrito a mano de U22 en dos tramos, `bbc0fff..93b13bf` (566 líneas, ítem 5) y `93b13bf..b610b95` (259 líneas, ítem 6), y aprobó los dos con tres sugerencias en total: el archivo de la prueba de humo no se escribe de forma atómica, la guarda de rutas locales de `read_smoke` solo prueba una de sus cuatro formas, y `_runs` de la prueba de la corrida real lee nueve columnas por posición. Quedan abiertas para las correcciones que siguen a la evaluación.
+La revisión nativa leyó lo escrito a mano de U22 en dos tramos, `bbc0fff..93b13bf` (566 líneas, ítem 5) y `93b13bf..b610b95` (259 líneas, ítem 6), y aprobó los dos con tres sugerencias en total: el archivo de la prueba de humo no se escribe de forma atómica, la guarda de rutas locales de `read_smoke` solo prueba una de sus cuatro formas, y `_runs` de la prueba de la corrida real lee nueve columnas por posición. Las tres se corrigieron después de la evaluación (`328573c` y `b1465c8`).
 
 ## 8. La documentación (U23)
 
 **Qué.** Este README, la ficha del modelo, el diccionario, el runbook, este paso a paso y las advertencias los escribió un agente con Sonnet con la prueba primero (`tests/docs/test_docs.py`). Las cifras salen de los archivos sellados y del resumen; el diccionario toma sus 20 tablas del modelo semántico; una prueba compara los intervalos con el resumen a los decimales del documento. También dejó las filas del 07 en `SITE-UPDATES.md` y las nueve del `LANDING-EXPANSION.md` que U01 debía.
 
+## 9. La evaluación independiente (L112)
+
+**Qué.** Un agente con Opus que no construyó el proyecto, en un clon aparte del commit `832271f` con su propio `.venv` y los datos copiados, recalculó cada cifra con lectores propios, decodificó de nuevo los 600 QR, regeneró la prueba con la semilla sellada (los mismos bytes), repitió una diaria y el cierre reales en copias (el mismo sello) y sondeó cada clase de defecto de la sección 24.2 del plan. Los veredictos se reproducen: cuatro de nueve criterios con umbral se cumplen. Encontró cuatro bloqueantes (C08, sobre facturas sintéticas, calculado por factura y no por carga, con un texto que mezclaba las dos; la línea base B1 con la orden de la verdad; el runbook R11 que no reconstruía; y el cierre de 1.032 s contra 600 s) y once advertencias. El informe está transcrito en [evaluation.md](evaluation.md).
+
+## 10. Las correcciones
+
+**Qué.** Un agente con Opus corrigió con la prueba primero, cada corrección de riesgo alto en su commit: C08 (sintético) como lo fija el preregistro, publicado al lado del sellado como análisis posterior al sello (`dda519e`, D59), y B1 con la orden que leyó el modelo, también al lado (`146925f` y `8f981c6`, D60); `POST /runs` que responde 200 a una corrida ya guardada (`2db2648`); el sello antes que la fila del registro y las épocas candidatas conservadas si la elección falla (`ae3f21b`, D62); las predicciones de CORD del cierre guardadas al lado del sello (`ebd3d3e`); la pasada del checkpoint de a ocho páginas, con los mismos árboles (`cf9bb56`, D61); R11 que reconstruye desde el sello sin ajustar y rechaza una reconstrucción a medias (`b1465c8`, D62); y las sugerencias baratas de las revisiones (`328573c`, `e7e9739`). Ningún valor sellado se reescribió. Lo que cambió en las salidas versionadas y cómo se regeneraron está en [evaluation.md](evaluation.md), sección «Las correcciones».
+
 ## Lo que sigue
 
-1. **La evaluación independiente**, un agente con Opus que no construyó el proyecto, en un clon aparte, que recalcula cada cifra con su propio código y sondea cada clase de defecto (plan, sección 28.1).
-2. **Las correcciones**, con la prueba primero, y **su comprobación** por otro agente.
-3. **La página del sitio** `invoices-erp` en marca-personal, con las filas de `SITE-UPDATES.md`.
-4. **Del dueño:** el `.pbix`, la definición de `ted_accuracy` y cómo anotar 94,00 contra 93,65, la numeración de las órdenes para `mode = http` y la homologación de ARCA.
+1. **La comprobación** de las correcciones, por otro agente con Opus (plan, sección 28, ítem 3), y la sincronización final de la documentación.
+2. **La página del sitio** `invoices-erp` en marca-personal, con las filas de `SITE-UPDATES.md`.
+3. **Del dueño:** el `.pbix`, la definición de `ted_accuracy` y cómo anotar 94,00 contra 93,65, la numeración de las órdenes para `mode = http`, la homologación de ARCA y si una versión posterior, con su propio sello, calcula C08 (sintético) por carga y B1 con la orden leída (D59, D60).

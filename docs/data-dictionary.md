@@ -111,6 +111,23 @@ Una factura recibe como mucho un motivo de decisión: el primero de esta lista q
 
 La prueba sintética se genera después del sello del lanzamiento y solo si el sello existe (D10).
 
+## Los archivos que el cierre deja al lado del sello
+
+El cierre escribe dos archivos en `reports/`, al lado de `model_seal.json`, sin tocarlo; una repetición del cierre los reescribe iguales.
+
+**`post_seal_analysis.json`** (D59, D60): los análisis posteriores al sello, calculados desde las mismas decisiones emitidas y la misma verdad sintética que la evaluación sellada, que no reemplazan ninguna cifra sellada. `seal_sha256` es la huella de los bytes del sello al lado del cual se calcularon (un archivo de otro sello no se publica) y `config_sha256` la de la configuración. `synthetic` es verdadero y `sealed` falso.
+
+| Clave | Qué es |
+| --- | --- |
+| `invoices` | Facturas de la prueba (600) |
+| `c08_preregistered` | C08 como lo fija la sección 8.1 de requirements: `b1` y `flow` con `posts` (cargas automáticas), `bad` (cargas malas) y `rate` (cargas malas sobre cargas) de la B1 sellada y del flujo; `value` la diferencia de las tasas; `ci_low` y `ci_high` su intervalo del 95 % (remuestreo pareado por factura, 2.000 remuestras, semilla 0, la tasa de cada lado sobre las facturas de la remuestra que cargó); `passed` si el límite inferior es mayor que 0 |
+| `b1_read_order` | B1 como dice D48, con la orden que leyó el modelo: `baselines` por cohorte (`all`, `test_known`, `test_new`) con `auto_post`, `bad_post`, `bad_post_rate`, `ci_low`, `ci_high` (Wilson), `straight_through` y `review_recall`; `c08_per_invoice` (la forma del sello: `b1_bad`, `flow_bad`, `invoices`, `value`, `ci_low`, `ci_high`, `passed`) y `c08_preregistered` (la forma de la sección 8.1, como arriba) |
+| `decisions` | Las decisiones que lo definen (`D59`, `D60`) |
+
+**`cord_test_predictions.json`** (D63, A10 de la evaluación): lo que leyeron el modelo elegido y el checkpoint sin ajustar en cada recibo de la prueba de CORD en el cierre, la única lectura de esa partición, para recalcular el TED sin volver a leerla. `synthetic` es falso (recibos reales) y `attribution` cita CORD con su licencia CC BY 4.0. `receipts` tiene una entrada por recibo con `receipt_key`, `truth` (el `gt_parse` del recibo), `chosen` y `checkpoint` (el árbol que leyó cada modelo). No tiene imágenes.
+
+**`summary.json` del sitio y `evaluation_summary.json`** llevan `post_seal_analysis`, el contenido de `post_seal_analysis.json` (en `summary.json` es `null` antes del sello, y `evaluation_summary.json` no lo tiene hasta que el archivo existe), y el criterio C08 lleva `verdict_es` (la frase de lo que el sello calculó, por factura) y `sealed_verdict_es` (la frase sellada, que pone las tasas por carga al lado de la diferencia por factura; D59).
+
 ## Las tablas del modelo estrella
 
 Una dimensión es una tabla de claves únicas; un hecho está en un grano. Las 17 relaciones del modelo son de uno a varios, con filtro en una sola dirección. Los hechos de facturas y de la prueba contienen solo filas selladas (D54).

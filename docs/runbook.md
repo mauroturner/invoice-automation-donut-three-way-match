@@ -9,7 +9,7 @@ $env:PYTHONPATH = "src"
 
 **Cómo se escribió este documento.** Está escrito desde lo que dicen el código, las pruebas y el registro de decisiones, con los mensajes tal como los emite el código (las rutas y las claves de corrida se abrevian); **no se corrió cada procedimiento** (por ejemplo, no se forzó un ajuste sin CUDA ni un disco lleno). Lo que sí se corrió una vez lo dice cada entrada. Donde el código nombra una entrada de este documento (`docs/runbook.md, R5`), es la que sigue.
 
-Códigos de salida de la CLI (`src/invoiceflow/cli.py`): `0` terminó bien (también una corrida sin entrega pendiente y un `replay` sin pendientes), `1` falló una tarea, `2` uso o configuración incorrectos (también una tarea rechazada por el estado de su corrida, un bloqueo tomado, un ajuste sin CUDA, un `post_as` que no es `draft` y la generación de la prueba sin el sello del lanzamiento) y `3` una fuente o una entrega rechazadas. Cada tarea que falla deja su estado en la corrida y su registro.
+Códigos de salida de la CLI (`src/invoiceflow/cli.py`): `0` terminó bien (también una corrida sin entrega pendiente y un `replay` sin pendientes), `1` falló una tarea, `2` uso o configuración incorrectos (también una tarea rechazada por el estado de su corrida, un bloqueo tomado, un ajuste sin CUDA, un `post_as` que no es `draft`, la generación de la prueba sin el sello del lanzamiento y un manifiesto de entregas o un ERP sustituto que no son los del almacén, R11) y `3` una fuente o una entrega rechazadas. Cada tarea que falla deja su estado en la corrida y su registro.
 
 Tres principios valen para todo el documento:
 
@@ -129,8 +129,8 @@ Tres principios valen para todo el documento:
 **Qué hacer.**
 
 1. Mover a otra carpeta, sin borrarlos hasta comprobar la reconstrucción, estos cuatro: `data\warehouse\`, `data\interim\`, `dataaw\deliveries\` (las entregas y su manifiesto) y `data\erp\` (el ERP sustituto). No mover `reports\model_seal.json`, `data\models\`, `dataaw\cord\` ni `dataawrca\`.
-2. `python -m invoiceflow replay`: el lanzamiento sin ajuste, las 20 diarias y el cierre.
-3. Comprobar que la tarea `evaluate` del cierre dice `state=repeat` y `seal=unchanged`, que `git status` muestra solo lo que depende de la corrida (las claves y las horas de las corridas, los tiempos), y correr `python -m pytest -m real_data`.
+2. `python -m invoiceflow replay`: el lanzamiento sin ajuste, las 20 diarias y el cierre. Con la GPU tarda unos 27 minutos (el 2026-11-19, sobre una copia de los datos: 26 min 33 s, el lanzamiento 61 s, cada diaria de 51 a 59 s y el cierre 411 s).
+3. Comprobar que la tarea `evaluate` del cierre dice `state=repeat` y `seal=unchanged` y que `git status` muestra solo lo que depende de la corrida (las claves y las horas de las corridas, los tiempos y las reglas del modelo de la corrida del lanzamiento, M02 y M03 en lugar de M04 a M06, porque no ajustó). Correr `python -m invoiceflow run` una vez (sin entregas pendientes termina como `no_delivery`, la corrida que la prueba real espera después del replay) y `python -m pytest -m real_data`.
 
 Si se movió solo una parte, `replay` y `run` salen con `2` sin escribir nada y dicen qué falta mover: con el manifiesto de entregas y sin el almacén, «el manifiesto de entregas dice que … están cargadas y el almacén no las tiene»; con el ERP sustituto y sin entregas, «el ERP sustituto ya tiene … documentos». `tests/e2e/test_rebuild.py` sigue estos pasos sobre una copia del modo rápido.
 

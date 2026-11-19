@@ -13,9 +13,9 @@ Lo que el proyecto encontró, medido una sola vez sobre la prueba y bajo un sell
 - **Lee bien lo que ya conoce y no lee lo que no vio.** C02 se cumple: el 95,9 % de las líneas de facturas sintéticas de proveedores conocidos se lee exacto (intervalo del 95 %, 94,6 a 96,8). C03 no se cumple: el 0 % de las líneas sintéticas de un diseño de factura nuevo (intervalo del 95 %, 0,0 a 0,3), contra un umbral de 80 %. Era lo esperable.
 - **No carga mal, pero la prueba no alcanza para decirlo con certeza** (C05 no se cumple): de 147 cargas automáticas sintéticas, ninguna fue mala; el límite superior de Wilson es 2,5 % y el máximo era 2 %. Con 147 cargas ningún resultado lo cumplía: hacían falta al menos 189 cargas automáticas. Se esperaba que se cumpliera.
 - **Carga sola menos de lo pedido** (C06 no se cumple): el 69,7 % (147 de 211) de las facturas sintéticas limpias de proveedores conocidos se cargó solo y bien, contra el 85 % que se pedía. El QR de las facturas sintéticas se lee en el 83,1 % (487 de 586) de las impresas con QR intacto, contra el 97 % (C04 no se cumple): con un QR pequeño y un escaneo malo, ningún lector lo ve.
-- **El cruce de tres vías ataja lo que el QR solo no ve** (C07, C08 y C09 se cumplen): 167 de 167 facturas sintéticas con una discrepancia sembrada fueron a revisión; solo con el QR en dos vías (B1) se carga mal el 23,4 % de las facturas sintéticas de la prueba y con el flujo el 0,0 %, una diferencia de 7,7 puntos (intervalo del 95 %, 5,7 a 10,0); y las 147 cargas sintéticas se leyeron de vuelta del ERP iguales a lo decidido, sin duplicar al repetir el último día.
+- **El cruce de tres vías ataja lo que el QR solo no ve** (C07, C08 y C09 se cumplen): 167 de 167 facturas sintéticas con una discrepancia sembrada fueron a revisión; solo con el QR en dos vías (B1) se cargaron mal 46 de las 600 facturas sintéticas de la prueba y con el flujo ninguna, 7,7 puntos por factura (intervalo del 95 %, 5,7 a 10,0), lo que se selló; por carga, como lo fija el preregistro, B1 cargó mal el 23,4 % de sus 197 cargas sintéticas y el flujo el 0 % de sus 147, una diferencia de 23,4 puntos (de 17,5 a 29,8), calculada después del sello (D59); y las 147 cargas sintéticas se leyeron de vuelta del ERP iguales a lo decidido, sin duplicar al repetir el último día.
 - **El ajuste olvida algo de CORD** (C01 no se cumple, y se esperaba que se cumpliera): en la prueba de CORD, 100 recibos reales, el modelo elegido tiene TED 85,4 contra 89,6 del checkpoint sin ajustar; la diferencia es −4,2 (intervalo del 95 %, −6,6 a −2,0), con un piso de −2,0 puntos.
-- **El cierre tardó 1.032 s contra un límite de 10 minutos** (RNF02, no se cumple): la lectura del checkpoint sobre las 600 páginas sintéticas para la línea base B2 domina el tiempo (es una estimación del escritor, no se midió por separado).
+- **El cierre sellado tardó 1.032 s contra un límite de 10 minutos** (RNF02, no se cumplió): el 86 % era la lectura del checkpoint sobre las 600 páginas sintéticas para la línea base B2, de a una. Leyéndolas de a ocho, con los mismos árboles (D61), el cierre de la reconstrucción desde el sello (runbook R11, sobre una copia de los datos) tardó 411 s y reprodujo el sello byte a byte.
 
 ## La solución
 
@@ -32,7 +32,7 @@ El resultado central no es un modelo sino una medición. Se compara con criterio
 
 ## Los resultados
 
-Corrida real del 2026-11-18 en una RTX 3090: el lanzamiento (el ajuste de 72 min 45 s dentro de 5.873 s), 20 entregas diarias y el cierre, con el commit `94db289` y el sello de SHA-256 `51884acb8d84d0dfe1651323d04b3e2e1477af99cb1b96f4fda480d1ccff2ce2`. El primer intento del lanzamiento se detuvo con `ModelChoiceError` porque la métrica leía el orden de las claves del árbol: el checkpoint sin ajustar puntuaba 49,08 en lugar de 94,00; se corrigió (D51; commit `4c50d45`) y se reanudó sin tocar una tolerancia. El bloque que sigue es el resumen sellado que `docs-sync` copia, tal cual:
+Corrida real del 2026-11-18 en una RTX 3090: el lanzamiento (el ajuste de 72 min 45 s dentro de 5.868,4 s), 20 entregas diarias y el cierre, con el commit `94db289` y el sello de SHA-256 `51884acb8d84d0dfe1651323d04b3e2e1477af99cb1b96f4fda480d1ccff2ce2`. El primer intento del lanzamiento se detuvo con `ModelChoiceError` porque la métrica leía el orden de las claves del árbol: el checkpoint sin ajustar puntuaba 49,08 en lugar de 94,00; se corrigió (D51; commit `4c50d45`) y se reanudó sin tocar una tolerancia. El bloque que sigue es el resumen sellado que `docs-sync` copia, tal cual:
 
 <!-- results:start -->
 ## Resumen de la evaluación
@@ -41,18 +41,25 @@ No se cumple: C01, C03, C04, C05, C06.
 
 Cada cifra marcada (sintético) sale de facturas que genera este proyecto.
 
-| ID | Criterio | Valor | Veredicto |
+| ID | Criterio | Lo que prueba el umbral | Veredicto |
 | --- | --- | --- | --- |
-| C01 | El ajuste no olvida CORD | 85,392 | En la prueba de CORD (100 recibos), el modelo elegido tiene TED 85,4 y el checkpoint sin ajustar 89,6: la diferencia es −4,2 (intervalo del 95 %, −6,6 a −2,0); el límite inferior debía quedar por encima de −2,0 puntos. No se cumple. |
+| C01 | El ajuste no olvida CORD | −6,56 puntos (límite inferior) | En la prueba de CORD (100 recibos), el modelo elegido tiene TED 85,4 y el checkpoint sin ajustar 89,6: la diferencia es −4,2 (intervalo del 95 %, −6,6 a −2,0); el límite inferior debía quedar por encima de −2,0 puntos. No se cumple. |
 | C02 | Lee bien las líneas de proveedores conocidos | 0,959 (sintético) | Sobre 300 facturas sintéticas de proveedores conocidos, el 95,9 % de las líneas se leyó exacto; el umbral era 90 %. |
 | C03 | Lee bien las líneas de un diseño nuevo | 0,000 (sintético) | Sobre 300 facturas sintéticas de proveedores con un diseño nuevo, el 0 % de las líneas se leyó exacto; el umbral era 80 %. No se cumple. |
 | C04 | Lee el QR | 0,831 (sintético) | Entre las 586 facturas sintéticas impresas con QR intacto, el lector leyó el texto exacto de 487: 83,1 %; el umbral era 97 %. No se cumple. |
-| C05 | No carga mal | 0,000 (sintético) | Sobre 600 facturas sintéticas, 0 de 147 cargas automáticas fue mala; el límite superior del intervalo de Wilson es 2,5 % y el máximo era 2 %. No se cumple. |
+| C05 | No carga mal | 0,025 (límite superior de Wilson) (sintético) | Sobre 600 facturas sintéticas, 0 de 147 cargas automáticas fue mala; el límite superior del intervalo de Wilson es 2,5 % y el máximo era 2 %. No se cumple. |
 | C06 | Se carga sola la mayoría de las facturas de proveedores conocidos | 0,697 (sintético) | Sobre las facturas sintéticas limpias de proveedores conocidos, el 69,7 % (147 de 211) se cargó solo y bien; el umbral era 85 %. No se cumple. |
 | C07 | Manda a revisión lo que no cierra | 1,000 (sintético) | De las 167 facturas sintéticas con una discrepancia sembrada, 167 de 167 fueron a revisión (100 %); el umbral era 99 %. |
-| C08 | El cruce de tres vías evita cargas malas | 0,000 (sintético) | Sobre las facturas sintéticas de la prueba, B1 (solo el QR en dos vías) cargó mal el 23,4 % y el flujo el 0,0 %; la diferencia es 7,7 puntos (intervalo del 95 %, 5,7 a 10,0); el límite inferior debía ser mayor que 0. |
+| C08 | El cruce de tres vías evita cargas malas | 5,7 puntos (límite inferior, por factura) (sintético) | Sobre las facturas sintéticas de la prueba, B1 (solo el QR en dos vías) cargó mal 46 de las 600 y el flujo 0: por factura, la diferencia es 7,7 puntos (intervalo del 95 %, 5,7 a 10,0); el límite inferior debía ser mayor que 0. Es la cifra sellada; la diferencia de las tasas de carga mala que fija el criterio, por carga, está entre los análisis posteriores al sello (D59). |
 | C09 | Lo cargado es lo decidido | 1,000 (sintético) | 147 de 147 cargas automáticas se leyeron de vuelta del ERP iguales a lo decidido (sintético) y repetir el último día creó 0 facturas nuevas; debían coincidir todas y no crearse ninguna. |
 | C10 | Variantes y seguimiento (informativo) | sin umbral | Informativo: sin umbral. Las líneas base, el recuerdo por clase sembrada, la lectura por campo, perfil y tamaño del QR y los 20 días de operación están en el resumen (0 variantes). |
+
+### Análisis posteriores al sello
+
+No reemplazan ninguna cifra sellada: se calcularon después del sello, sobre las mismas decisiones emitidas y la misma verdad sintética, y se publican al lado de lo sellado (D59).
+
+- **C08 como lo fija el preregistro** (requirements, sección 8.1: la tasa de carga mala es cargas malas sobre facturas con `auto_post`): B1 cargó mal 46 de sus 197 cargas (23,4 %) y el flujo 0 de 147 (0,0 %); la diferencia de las tasas es 23,4 puntos, con un intervalo del 95 % de 17,5 a 29,8 (remuestreo pareado por factura): se cumple también así (sintético). El veredicto sellado de C08 no cambia; el texto sellado, que pone esas tasas por carga al lado de la diferencia por factura, queda en el sello y en el almacén.
+- **B1 con la orden que leyó el modelo** (D48, D60; la B1 sellada tomó la orden de la verdad): carga 189 facturas y 41 mal (21,7 % de sus cargas). C08 por factura, como el sello: 6,8 puntos (intervalo del 95 % de 5,0 a 9,0), se cumple; por carga, como el preregistro: 21,7 puntos (16,0 a 28,0), se cumple (sintético).
 
 Cifras de la validación (no son la prueba; cada una dice con qué se ajustó su modelo):
 
@@ -68,7 +75,8 @@ Cómo se lee, con las cifras de la prueba (600 facturas sintéticas, 300 de prov
 | Línea base | Cargas automáticas de proveedores conocidos | Cargas malas | Cargas automáticas de proveedores nuevos | Cargas malas |
 | --- | --- | --- | --- | --- |
 | B0, todo a revisión | 0 | 0 | 0 | 0 |
-| B1, solo el QR en dos vías | 180 | 29 | 17 | 17 |
+| B1, solo el QR en dos vías (la sellada, con la orden de la verdad) | 180 | 29 | 17 | 17 |
+| B1 con la orden que leyó el modelo (D48, D60; después del sello) | 175 | 27 | 14 | 14 |
 | B2, el checkpoint sin ajustar | 0 | 0 | 0 | 0 |
 | B3, las reglas con los campos verdaderos | 211 | 60 | 222 | 222 |
 | El flujo | 147 | 0 | 0 | 0 |
@@ -81,9 +89,9 @@ Todas las cifras de la tabla son sintéticas. Las cargas malas de B3 son los err
 - **C05 no se cumple (cifras sintéticas).** Cero cargas malas de 147 es lo que se quería, pero el intervalo de Wilson (intervalo del 95 %, 0,0 a 2,5) no lo prueba con tan pocas cargas: hacían falta al menos 189.
 - **C06 no se cumple (cifras sintéticas).** El paso directo de proveedores conocidos es del 69,7 % (147 de 211) y el de proveedores nuevos, 0.
 - **C07 y C09 se cumplen (cifras sintéticas).** 167 de 167 discrepancias sembradas fueron a revisión (el primer motivo fue el esperado en 67 de ellas; informativo); 147 de 147 leídas de vuelta iguales y 0 facturas nuevas al repetir el último día.
-- **C08 se cumple (cifras sintéticas).** B1 menos el flujo, 7,7 puntos (intervalo del 95 %, 5,7 a 10,0).
+- **C08 se cumple (cifras sintéticas).** Por factura, como se selló, B1 menos el flujo es 7,7 puntos (intervalo del 95 %, 5,7 a 10,0). Después del sello (D59, D60): por carga, como lo fija el preregistro, 23,4 puntos (de 17,5 a 29,8); con la B1 de D48, 6,8 puntos por factura (de 5,0 a 9,0) y 21,7 por carga (de 16,0 a 28,0). El veredicto no cambia en ninguna forma.
 - **C01 no se cumple, y se esperaba que sí.** Es la única cifra de recibos reales. La diferencia de −4,19 puntos de TED va de −6,56 a −2,00; el checkpoint publicado ya se había medido sobre la prueba de CORD en la investigación (89,62 %), así que esa cifra no es una medida independiente del ajuste. Los motivos son del análisis posterior al sello, que hace la evaluación independiente.
-- **Tiempos** (RNF02): el lanzamiento 5.873 s (límite 3 h); las corridas diarias de 30 facturas, de 49 a 60 s (límite 120 s); 1,379 s de media y 2,300 s de máximo del p95 por factura; la prueba de Docker 119 s (límite 15 min); **el cierre 1.032 s contra 10 minutos: no se cumple**.
+- **Tiempos** (RNF02): el lanzamiento 5.868,4 s, la suma de sus tareas (límite 3 h); las corridas diarias de 30 facturas, de 49 a 60 s (límite 120 s); 1,379 s de media y 2,300 s de máximo del p95 por factura; la prueba de Docker 119 s (límite 15 min); **el cierre sellado 1.032 s contra 10 minutos: no se cumplió**; con el código corregido, 411 s en la reconstrucción de R11 sobre una copia de los datos.
 - **Memoria** (RNF03): el pico de `PeakWorkingSetSize` fue de 6.624,3 MB (el límite es 16 GB de ese contador) y el de `torch.cuda.max_memory_allocated` fue de 7.805,4 MB (el límite es 20 GB de ese contador).
 
 ![Cada día: lo que se carga solo y lo que va a revisión](docs/figures/operation.png)
@@ -177,10 +185,11 @@ Las 13 clases de discrepancia que el generador siembra, el modelo de datos y las
 | [docs/runbook.md](docs/runbook.md) | Qué hacer cuando algo no sale como se esperaba: R1 a R12 |
 | [docs/paso-a-paso.md](docs/paso-a-paso.md) | La cronología real del proyecto, commit por commit, desde el registro y `git log` |
 | [docs/review-advisories.md](docs/review-advisories.md) | Los 38 hallazgos de las revisiones nativas, cada uno con su ubicación y su estado |
+| [docs/evaluation.md](docs/evaluation.md) | La evaluación independiente, sus bloqueantes y advertencias, y las correcciones |
 
-La evaluación independiente todavía no se hizo: la hace un agente que no construyó el proyecto, y sus correcciones y su comprobación vienen después (plan, sección 28). La corrección del lanzamiento (la métrica de CORD que leía el orden de las claves) y su efecto son del registro (D51); la definición de `ted_accuracy` y cómo anotar 94,00 contra 93,65 son del dueño.
+La evaluación independiente la hizo un agente con Opus que no construyó el proyecto (L112): reprodujo los veredictos, las 600 decisiones y el sello, y encontró cuatro bloqueantes y once advertencias, que se corrigieron o se dejaron dichos con la prueba primero ([docs/evaluation.md](docs/evaluation.md)); la comprobación de las correcciones la hace otro agente (plan, sección 28). La corrección del lanzamiento (la métrica de CORD que leía el orden de las claves) y su efecto son del registro (D51); la definición de `ted_accuracy` y cómo anotar 94,00 contra 93,65 son del dueño.
 
-Advertencias abiertas: 32 de las 38 de las revisiones nativas, para las correcciones que siguen a la evaluación independiente (docs/review-advisories.md).
+Advertencias abiertas: 0 de las 38 de las revisiones nativas: 15 corregidas, 1 refutada y 22 dejadas con su motivo (docs/review-advisories.md).
 
 ## Con IA, de punta a punta
 
@@ -193,7 +202,9 @@ Este proyecto lo construyen agentes de IA, cada uno con el modelo que el dueño 
 - **Revisión** (L96, L98, L100, L102, L104, L106, L108, L110). La revisión nativa de Gentle AI revisó la investigación y casi cada unidad, con el consentimiento aceptado de forma automática por pedido del dueño; dio 38 hallazgos (en `docs/review-advisories.md`). U17 y U19 y el commit generado `94db289` no se pudieron revisar por el presupuesto de contexto.
 - **La corrida real** (L109). Una sola vez, en la RTX 3090, con un fallo y su reparación, la prueba de humo contra ERPNext real y cuatro de nueve criterios cumplidos.
 - **La documentación** (U23). Este README, la ficha del modelo, el diccionario, el runbook, el paso a paso y las advertencias los escribió un agente con Sonnet con la prueba primero (`tests/docs/test_docs.py`); las cifras salen de los archivos sellados y una prueba las compara.
-- **Lo que no se hizo todavía.** La evaluación independiente, sus correcciones y su comprobación, la página del sitio y el `.pbix`.
+- **La evaluación independiente** (L112). Un agente con Opus, en un clon aparte, recalculó cada cifra con su propio código y encontró cuatro bloqueantes: C08 (sintético) calculado por factura y no por carga, la línea base B1 con la orden de la verdad, el runbook R11 que no reconstruía y el cierre de 1.032 s.
+- **Las correcciones.** Un agente con Opus, con la prueba primero; lo que habría cambiado lo sellado se publica al lado como análisis posterior al sello (D59, D60) y el sello no se tocó ([docs/evaluation.md](docs/evaluation.md)).
+- **Lo que no se hizo todavía.** La comprobación de las correcciones, la página del sitio y el `.pbix`.
 - **Memoria.** Engram guarda el contexto entre sesiones; el documento de seguimiento conserva las palabras del dueño tal cual.
 
 ## Para qué sirve
@@ -207,13 +218,14 @@ Lo que no sirve: cargar sin revisión facturas de un diseño nuevo, leer los res
 
 ## Cómo correrlo de punta a punta
 
-Requisitos: Windows 10 u 11 (o Linux), Python 3.11, una GPU con CUDA y 24 GB para el ajuste real, 120 GB de disco para CORD y el modelo y, solo para Airflow, Docker Desktop. No se usa el Python global: el proyecto trae su propio entorno. El paquete no se instala: los comandos lo encuentran con `PYTHONPATH` en `src`.
+Requisitos: Windows 10 u 11 (o Linux), Python 3.11, una GPU con CUDA y 24 GB para el ajuste real, 120 GB de disco para CORD y el modelo y, solo para Airflow, Docker Desktop. No se usa el Python global: el proyecto trae su propio entorno. El paquete no se instala: los comandos lo encuentran con `PYTHONPATH` en `src`. torch se instala sin sus dependencias desde el índice de PyTorch, porque en un `.venv` nuevo el índice cu130 solo tiene `typing-extensions` como código fuente y la instalación falla; `requirements-dev.txt` trae esas dependencias fijadas, y `pip check` tiene que salir con 0.
 
 ```powershell
 cd 07-Ecommerce-Invoices-ERP
 py -3.11 -m venv .venv
-.venv\Scripts\python -m pip install torch==2.14.1 --index-url https://download.pytorch.org/whl/cu130
+.venv\Scripts\python -m pip install torch==2.14.1 --no-deps --index-url https://download.pytorch.org/whl/cu130
 .venv\Scripts\python -m pip install -r requirements-dev.txt
+.venv\Scripts\python -m pip check
 $env:PYTHONPATH = "src"
 ```
 
@@ -224,7 +236,7 @@ $env:PYTHONPATH = "src"
 .venv\Scripts\python research\s08_arca_docs.py
 ```
 
-**2. Pruebas** (sin las que necesitan CORD, la GPU, Docker o ERPNext). La suite por defecto recoge 1.274 pruebas y termina en menos de 180 s en el equipo de desarrollo (ver la ficha del modelo, que dice en qué commit se midieron los tiempos):
+**2. Pruebas** (sin las que necesitan CORD, la GPU, Docker o ERPNext). La suite por defecto recoge 1.288 pruebas y termina en menos de 180 s en el equipo de desarrollo (ver la ficha del modelo, que dice en qué commit se midieron los tiempos):
 
 ```powershell
 .venv\Scripts\python -m pytest
