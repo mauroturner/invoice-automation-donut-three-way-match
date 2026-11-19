@@ -128,7 +128,7 @@ Tres principios valen para todo el documento:
 
 **Qué hacer.**
 
-1. Mover a otra carpeta, sin borrarlos hasta comprobar la reconstrucción, estos cuatro: `data\warehouse\`, `data\interim\`, `dataaw\deliveries\` (las entregas y su manifiesto) y `data\erp\` (el ERP sustituto). No mover `reports\model_seal.json`, `data\models\`, `dataaw\cord\` ni `dataawrca\`.
+1. Mover a otra carpeta, sin borrarlos hasta comprobar la reconstrucción, estos cuatro: `data\warehouse\`, `data\interim\`, `data\raw\deliveries\` (las entregas y su manifiesto) y `data\erp\` (el ERP sustituto). No mover `reports\model_seal.json`, `data\models\`, `data\raw\cord\` ni `data\raw\arca\`.
 2. `python -m invoiceflow replay`: el lanzamiento sin ajuste, las 20 diarias y el cierre. Con la GPU tarda unos 27 minutos (el 2026-11-19, sobre una copia de los datos: 26 min 33 s, el lanzamiento 61 s, cada diaria de 51 a 59 s y el cierre 411 s).
 3. Comprobar que la tarea `evaluate` del cierre dice `state=repeat` y `seal=unchanged` y que `git status` muestra solo lo que depende de la corrida (las claves y las horas de las corridas, los tiempos y las reglas del modelo de la corrida del lanzamiento, M02 y M03 en lugar de M04 a M06, porque no ajustó). Correr `python -m invoiceflow run` una vez (sin entregas pendientes termina como `no_delivery`, la corrida que la prueba real espera después del replay) y `python -m pytest -m real_data`.
 

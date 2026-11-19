@@ -551,3 +551,20 @@ def test_every_markdown_table_row_has_the_header_width(project_root: Path, readm
             body = rows[: next((k for k, row in enumerate(rows) if not row.startswith("|")), len(rows))]
             broken += [f"{name}:{at + 1 + k}" for k, row in enumerate(body) if _cells(row) != width]
     assert broken == [] and tables >= 30
+
+
+CONTROL_BYTES = re.compile(rb"[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]")   # everything but \t, \n and (in a CRLF pair) \r
+
+
+def test_no_markdown_file_holds_a_control_byte(project_root: Path) -> None:
+    """N1 of the recheck: a Windows path written in a script string lost its backslashes («data\raw\» became a carriage return and "aw\\"; «\arca» a BEL) and R11 step 1 named
+    paths that do not exist. No Markdown file of the README or ``docs/`` holds a control byte other than a tab and a line break (a carriage return only as the first half of CRLF)."""
+    files = [project_root / "README.md", *sorted((project_root / "docs").glob("*.md"))]
+    assert len(files) >= 8
+    found = []
+    for path in files:
+        data = path.read_bytes()
+        lone_cr = re.sub(rb"\r\n", b"", data).count(b"\r")
+        found += [f"{path.name}: {hit.group(0)!r} at {hit.start()}" for hit in CONTROL_BYTES.finditer(data)]
+        found += [f"{path.name}: {lone_cr} lone carriage return(s)"] * bool(lone_cr)
+    assert found == []
