@@ -105,7 +105,7 @@ def c08_per_invoice_verdict(passed: bool, *, b1_bad: int, flow_bad: int, invoice
     """The sentence the summary tells for the sealed C08. The sealed sentence (``verdict`` above, kept as it is so the seal is rebuilt) writes the bad-post rates per auto-post of B1 and the flow
     beside a difference computed per invoice of the whole test; this one tells only what the seal computed, per invoice, and says where the preregistered difference of rates is (D59)."""
     mark = "" if passed else " No se cumple."
-    return (f"Sobre las {invoices} facturas sintéticas de la prueba, B1 (solo el QR en dos vías) cargó mal {b1_bad} de las {invoices} y el flujo {flow_bad}: por factura, la diferencia es "
+    return (f"Sobre las facturas sintéticas de la prueba, B1 (solo el QR en dos vías) cargó mal {b1_bad} de las {invoices} y el flujo {flow_bad}: por factura, la diferencia es "
             f"{es(value * 100, 1)} puntos (intervalo del 95 %, {es(low * 100, 1)} a {es(high * 100, 1)}); el límite inferior debía ser mayor que 0.{mark} Es la cifra sellada; la diferencia de las tasas "
             "de carga mala que fija el criterio, por carga, está entre los análisis posteriores al sello (D59).")
 
