@@ -1,0 +1,147 @@
+{
+ "artifact_sha256": "b4cc60f85ddc0fb954e538158c1a111349818b5c00f744021a21700806cdee2e",
+ "as_of": "2026-10-29 00:00:00",
+ "attribution": "Park et al. (2019), CORD: A Consolidated Receipt Dataset for Post-OCR Parsing, Clova AI, CC BY 4.0 (https://creativecommons.org/licenses/by/4.0/), commit 7f0115a4. Las facturas, órdenes, remitos, proveedores y CUIT son sintéticos.",
+ "cord_commit": "7f0115a4b758a71d6473b8d085751692da2fef98",
+ "rules": [
+  {
+   "aggregation": "per_run",
+   "files": 0,
+   "name_es": "La entrega es la siguiente del plan",
+   "rule_id": "V10",
+   "scope": "entrega",
+   "severity": "bloqueante",
+   "status": "pass",
+   "synthetic": true
+  },
+  {
+   "aggregation": "per_run",
+   "files": 0,
+   "name_es": "Archivos, cantidad y SHA-256 son los del manifiesto de la entrega; la verdad del día existe",
+   "rule_id": "V11",
+   "scope": "entrega",
+   "severity": "bloqueante",
+   "status": "pass",
+   "synthetic": true
+  },
+  {
+   "aggregation": "per_run",
+   "files": 0,
+   "name_es": "El tipo por los primeros bytes es uno de los formatos y coincide con la extensión",
+   "rule_id": "V12",
+   "scope": "archivo",
+   "severity": "advertencia",
+   "status": "pass",
+   "synthetic": true
+  },
+  {
+   "aggregation": "per_run",
+   "files": 0,
+   "name_es": "Archivo de 1 byte al máximo permitido",
+   "rule_id": "V13",
+   "scope": "archivo",
+   "severity": "advertencia",
+   "status": "pass",
+   "synthetic": true
+  },
+  {
+   "aggregation": "per_run",
+   "files": 0,
+   "name_es": "Píxeles dentro del máximo, leídos de la cabecera antes de decodificar",
+   "rule_id": "V14",
+   "scope": "archivo",
+   "severity": "advertencia",
+   "status": "pass",
+   "synthetic": true
+  },
+  {
+   "aggregation": "per_run",
+   "files": 0,
+   "name_es": "PDF de una página, con una sola imagen y sin texto, programas ni adjuntos",
+   "rule_id": "V15",
+   "scope": "archivo",
+   "severity": "advertencia",
+   "status": "pass",
+   "synthetic": true
+  },
+  {
+   "aggregation": "per_run",
+   "files": 0,
+   "name_es": "Hash repetido dentro de la entrega o ya cargado",
+   "rule_id": "V16",
+   "scope": "archivo",
+   "severity": "advertencia",
+   "status": "pass",
+   "synthetic": true
+  },
+  {
+   "aggregation": "per_run",
+   "files": 0,
+   "name_es": "Archivos por formato",
+   "rule_id": "I01",
+   "scope": "entrega",
+   "severity": "informativa",
+   "status": "pass",
+   "synthetic": true
+  },
+  {
+   "aggregation": "per_run",
+   "files": 0,
+   "name_es": "El artefacto y el tokenizador tienen la huella registrada antes de leerlos; solo safetensors",
+   "rule_id": "M02",
+   "scope": "modelo",
+   "severity": "bloqueante",
+   "status": "pass",
+   "synthetic": true
+  },
+  {
+   "aggregation": "latest",
+   "files": 0,
+   "name_es": "La configuración es la sellada",
+   "rule_id": "M03",
+   "scope": "modelo",
+   "severity": "advertencia",
+   "status": "pass",
+   "synthetic": true
+  },
+  {
+   "aggregation": "latest",
+   "files": 0,
+   "name_es": "Alguna candidata conserva CORD: no pierde más de cord_val_tolerance puntos de TED en la validación",
+   "rule_id": "M04",
+   "scope": "modelo",
+   "severity": "bloqueante",
+   "status": "pass",
+   "synthetic": true
+  },
+  {
+   "aggregation": "latest",
+   "files": 0,
+   "name_es": "Tamaños de las particiones como en la configuración; cada objetivo cabe en max_length",
+   "rule_id": "M05",
+   "scope": "modelo",
+   "severity": "bloqueante",
+   "status": "pass",
+   "synthetic": true
+  },
+  {
+   "aggregation": "latest",
+   "files": 0,
+   "name_es": "El oráculo manda a revisión el 100 % de las sembradas y carga el 100 % de las limpias",
+   "rule_id": "M06",
+   "scope": "modelo",
+   "severity": "bloqueante",
+   "status": "pass",
+   "synthetic": true
+  }
+ ],
+ "run_key": "20261118T235004067560Z",
+ "schema_version": 1,
+ "synthetic_note_es": "Las facturas, órdenes, remitos, proveedores y CUIT son sintéticos; los recibos de CORD son reales.",
+ "totals": {
+  "deliveries_loaded": 22,
+  "deliveries_rejected": 0,
+  "invoices": 600,
+  "synthetic": true
+ }
+}

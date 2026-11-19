@@ -1,0 +1,21 @@
+{
+ "documents": {
+  "invoices": 2,
+  "items": 2,
+  "orders": 1,
+  "receipts": 1,
+  "suppliers": 1
+ },
+ "duplicate_bill_no": {
+  "default_settings_creates_a_duplicate": true,
+  "status_with_uniqueness_on": 417
+ },
+ "erpnext_version": "15.124.4",
+ "frappe_version": "15.126.0",
+ "image": "frappe/erpnext:v15.124.4",
+ "image_digest": "sha256:656ccfd15dd98a184f1874f5b3797d31386c3d54a18def64c9594c7588ab55d7",
+ "readback_equal": true,
+ "repost_creates_none": true,
+ "synthetic": true,
+ "tested_on": "2026-11-18"
+}

@@ -1,0 +1,97 @@
+{
+ "delivery_id": "C2026-10-29",
+ "files": [],
+ "results": [
+  {
+   "aggregation": "per_run",
+   "detail": {
+    "expected": "C2026-10-29"
+   },
+   "examples": [],
+   "files_affected": 0,
+   "name_es": "La entrega es la siguiente del plan",
+   "passed": true,
+   "rule_id": "V10",
+   "scope": "entrega",
+   "severity": "bloqueante"
+  },
+  {
+   "aggregation": "per_run",
+   "detail": {},
+   "examples": [],
+   "files_affected": 0,
+   "name_es": "Archivos, cantidad y SHA-256 son los del manifiesto de la entrega; la verdad del día existe",
+   "passed": true,
+   "rule_id": "V11",
+   "scope": "entrega",
+   "severity": "bloqueante"
+  },
+  {
+   "aggregation": "per_run",
+   "detail": {},
+   "examples": [],
+   "files_affected": 0,
+   "name_es": "El tipo por los primeros bytes es uno de los formatos y coincide con la extensión",
+   "passed": true,
+   "rule_id": "V12",
+   "scope": "archivo",
+   "severity": "advertencia"
+  },
+  {
+   "aggregation": "per_run",
+   "detail": {},
+   "examples": [],
+   "files_affected": 0,
+   "name_es": "Archivo de 1 byte al máximo permitido",
+   "passed": true,
+   "rule_id": "V13",
+   "scope": "archivo",
+   "severity": "advertencia"
+  },
+  {
+   "aggregation": "per_run",
+   "detail": {},
+   "examples": [],
+   "files_affected": 0,
+   "name_es": "Píxeles dentro del máximo, leídos de la cabecera antes de decodificar",
+   "passed": true,
+   "rule_id": "V14",
+   "scope": "archivo",
+   "severity": "advertencia"
+  },
+  {
+   "aggregation": "per_run",
+   "detail": {},
+   "examples": [],
+   "files_affected": 0,
+   "name_es": "PDF de una página, con una sola imagen y sin texto, programas ni adjuntos",
+   "passed": true,
+   "rule_id": "V15",
+   "scope": "archivo",
+   "severity": "advertencia"
+  },
+  {
+   "aggregation": "per_run",
+   "detail": {},
+   "examples": [],
+   "files_affected": 0,
+   "name_es": "Hash repetido dentro de la entrega o ya cargado",
+   "passed": true,
+   "rule_id": "V16",
+   "scope": "archivo",
+   "severity": "advertencia"
+  },
+  {
+   "aggregation": "per_run",
+   "detail": {},
+   "examples": [],
+   "files_affected": 0,
+   "name_es": "Archivos por formato",
+   "passed": true,
+   "rule_id": "I01",
+   "scope": "entrega",
+   "severity": "informativa"
+  }
+ ],
+ "run_key": "20261118T235004067560Z"
+}

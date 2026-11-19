@@ -1,0 +1,110 @@
+{
+ "artifact_sha256": "b4cc60f85ddc0fb954e538158c1a111349818b5c00f744021a21700806cdee2e",
+ "as_of": "2026-10-29 00:00:00",
+ "attribution": "Park et al. (2019), CORD: A Consolidated Receipt Dataset for Post-OCR Parsing, Clova AI, CC BY 4.0 (https://creativecommons.org/licenses/by/4.0/), commit 7f0115a4. Las facturas, órdenes, remitos, proveedores y CUIT son sintéticos.",
+ "files": [
+  {
+   "bytes": 4761,
+   "name": "dim_date.parquet",
+   "sha256": "72b06bd2e88ecbd07c25a45340e216d87c06c9c4627610a0ad1c89982f93d15d"
+  },
+  {
+   "bytes": 4592,
+   "name": "dim_supplier.parquet",
+   "sha256": "9193b038329c5ba01b89b0080b229e7f3b59790a39f598804d2e8b673a61fafd"
+  },
+  {
+   "bytes": 4641,
+   "name": "dim_reason.parquet",
+   "sha256": "1c7af106321c1f96bb82b45f6329615c66ad43b0545855a54ccb243e43106aee"
+  },
+  {
+   "bytes": 2816,
+   "name": "dim_field.parquet",
+   "sha256": "1c975b479b0c606fcc310007e7e3d290129170edd830d974b3c9e13f36b7f67d"
+  },
+  {
+   "bytes": 2232,
+   "name": "dim_cohort.parquet",
+   "sha256": "ed1af6775dcbc9fea13f9b79c91693255dd9e6b364cecd9e8edfc49da3bafd1f"
+  },
+  {
+   "bytes": 2018,
+   "name": "dim_scan.parquet",
+   "sha256": "362463e874e53515cf40dba8f69e6faea7e83e2ebd797ccdfcf8ceb53f483b45"
+  },
+  {
+   "bytes": 3062,
+   "name": "dim_planted.parquet",
+   "sha256": "810705e8b4f30f844f990abc7b6e1a4db62d208cd16bd25e0d9dcf6b76181982"
+  },
+  {
+   "bytes": 2168,
+   "name": "dim_baseline.parquet",
+   "sha256": "a314ea62b2b0cd2454046d5381d0ec2421a3472d7610d1e12f9e087744bc96e5"
+  },
+  {
+   "bytes": 3801,
+   "name": "dim_model.parquet",
+   "sha256": "fecfaaef47403a8daf8ed4c543fab510c20f223a5450e85418989470c1227b59"
+  },
+  {
+   "bytes": 6913,
+   "name": "dim_pipeline_run.parquet",
+   "sha256": "0c43690bded6af05667ab0368e4c59364fbc9ff1df164e5a8908a1a7447eb38a"
+  },
+  {
+   "bytes": 23685,
+   "name": "fact_invoice.parquet",
+   "sha256": "c7db0a0d51314b0f859d313529535e16b09465aa6a9bbfefa727afaa72ca8c46"
+  },
+  {
+   "bytes": 7435,
+   "name": "fact_invoice_reason.parquet",
+   "sha256": "5d154c135c3d3883519626169bcd844e2f83f15f95ab47bec2db68de866680b7"
+  },
+  {
+   "bytes": 4851,
+   "name": "fact_field_read.parquet",
+   "sha256": "29557cd6a55dd5c901acb4771f971dea368eadcf5dadf29668530779880c05ab"
+  },
+  {
+   "bytes": 3516,
+   "name": "fact_qr_read.parquet",
+   "sha256": "bf76ecf31d5e7a0115add6182e4da2bb0286b6e348f1665ac52afde3ec500ea7"
+  },
+  {
+   "bytes": 4476,
+   "name": "fact_daily_ops.parquet",
+   "sha256": "58dbbab18f4de36931e36f9cf60382eec260e6368957e0020f5382c33936f77e"
+  },
+  {
+   "bytes": 4525,
+   "name": "fact_baseline.parquet",
+   "sha256": "88b0e0a5483e1326f1bcd98542245f7fe34e356fb53695b0bebffd0e23e68c40"
+  },
+  {
+   "bytes": 3906,
+   "name": "fact_cord_eval.parquet",
+   "sha256": "aaf4e997602387973e501c84f44f1f09086c533cf972e0a85374ccbd80d9c8e2"
+  },
+  {
+   "bytes": 3480,
+   "name": "fact_choice.parquet",
+   "sha256": "660e5f75c9ab1e89138ebee4c1e219e7fba5917f229f90eb37ea8aa1cc55cdf4"
+  },
+  {
+   "bytes": 8055,
+   "name": "fact_evaluation_summary.parquet",
+   "sha256": "b3288d3318624a4f9f522222b6d6c92c537d72e806840be781261e9fe1e82ce3"
+  },
+  {
+   "bytes": 5270,
+   "name": "fact_validation.parquet",
+   "sha256": "8a0e978b9d8ee18fb28c9db3ddc8e44f97e7776f2fb534cc0ac8305e065e1cab"
+  }
+ ],
+ "run_key": "20261118T235004067560Z",
+ "synthetic": "true",
+ "version": 1
+}

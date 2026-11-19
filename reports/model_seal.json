@@ -1,0 +1,737 @@
+{
+ "launch": {
+  "artifact_name": "model-v1-114913c99b42",
+  "artifact_sha256": "b4cc60f85ddc0fb954e538158c1a111349818b5c00f744021a21700806cdee2e",
+  "as_of": "2026-10-01 00:00:00",
+  "checkpoint_cord_val": {
+   "fit_splits": "checkpoint",
+   "receipts": 100,
+   "ted": 93.99837767414691
+  },
+  "choice": {
+   "candidates": [
+    {
+     "cord_ted": 87.98019183086377,
+     "epoch": 2,
+     "exact_known": 0.9379157427937915,
+     "exact_new": 0.0,
+     "fit_splits": "cord_train+synth_train",
+     "score": 0.46895787139689576,
+     "status": "dropped_cord"
+    },
+    {
+     "cord_ted": 92.7809835632877,
+     "epoch": 4,
+     "exact_known": 0.9711751662971175,
+     "exact_new": 0.0,
+     "fit_splits": "cord_train+synth_train",
+     "score": 0.48558758314855877,
+     "status": "kept"
+    },
+    {
+     "cord_ted": 91.98178074000857,
+     "epoch": 6,
+     "exact_known": 0.967849223946785,
+     "exact_new": 0.0,
+     "fit_splits": "cord_train+synth_train",
+     "score": 0.4839246119733925,
+     "status": "dropped_cord"
+    }
+   ],
+   "checkpoint_cord_ted": 93.99837767414691,
+   "chosen_epoch": 4,
+   "cord_val_tolerance": 2.0,
+   "floor": 91.99837767414691,
+   "score": 0.48558758314855877
+  },
+  "chosen_epoch": 4,
+  "config_sha256": "114913c99b42d6f5a6b7a6e14eaa082f82b23d8c2452f357140475bca8978993",
+  "fonts_sha256": "a296c4ffab8c2dc36c9dc745139d52df1e23948a7e8dfbbfe08b5bcce8b8880f",
+  "master_sha256": "7f614041065961ef0d72758e91b5f5c80b81eca49afb6de2e996ab5a1df769b5",
+  "model_version": "v1",
+  "oracle_validation": {
+   "fit_splits": "none",
+   "invoices": 300,
+   "planted": 88,
+   "posted": 212,
+   "wrong": 0
+  },
+  "run_key": "20261118T201144848904Z",
+  "sealed_config": {
+   "arca_sha256_seen": "a6d0f71e14f282836f07834af76a975dd885386bf972d860878d4b44278deaac",
+   "calendar": {
+    "history_start": "2026-01-05",
+    "launch_last_day": "2026-09-30",
+    "test_first_day": "2026-10-01",
+    "test_last_day": "2026-10-28",
+    "weekdays_only": true
+   },
+   "cord_sha256_seen": [
+    "da3994eee1bf9bd3c57f0d53a72c3a6812c8696c5ba26245987949ddf73483cc",
+    "cce4def16a0d6a6c75f80be712f7494c56c318a8829b712f5c62650155c9e58e",
+    "591e2db8fe8b1d364b054f46e8c375b7f00e72578914ba46a573b6858162cab2",
+    "1ffd9de8d6fbcee7630fd4cdfedff05b9b7fabc0fae4fc17557c5fe7cf178748",
+    "0d0f6dac11fdcc549de2746aa9f53136a3bc22a2a1aff2b0b847f7622ad60c15",
+    "51c65f1788faff392abe2a0b55b023eb23e9be551c509138eaa3a832514224e7"
+   ],
+   "criteria": {
+    "c01_min_ted_diff": -2.0,
+    "c02_min_line_exact": 0.9,
+    "c03_min_line_exact": 0.8,
+    "c04_min_qr_read": 0.97,
+    "c05_max_bad_post_upper": 0.02,
+    "c06_min_straight_through": 0.85,
+    "c07_min_review_recall": 0.99
+   },
+   "erp": {
+    "post_as": "draft"
+   },
+   "evaluation": {
+    "resamples": 2000,
+    "seed": 0
+   },
+   "intake": {
+    "formats": [
+     "png",
+     "jpeg",
+     "pdf"
+    ],
+    "max_file_bytes": 10485760,
+    "max_pixels": 40000000,
+    "pdf_max_objects": 200
+   },
+   "match": {
+    "price_tolerance_pct": 2.0,
+    "qty_over_receipt": 0.0,
+    "require_qr": true,
+    "rounding_per_line": 0.01,
+    "supported_types": [
+     1
+    ],
+    "total_qr_tolerance": 0.01
+   },
+   "model": {
+    "base": "naver-clova-ix/donut-base-finetuned-cord-v2",
+    "base_revision": "8003d433113256b4ce3a0f5bf604b29ff78a7451",
+    "batch_size": 1,
+    "bf16": true,
+    "candidate_epochs": [
+     2,
+     4,
+     6
+    ],
+    "cord_val_tolerance": 2.0,
+    "epochs": 6,
+    "grad_accumulation": 8,
+    "infer_device": "auto",
+    "input_size": [
+     1280,
+     960
+    ],
+    "kind": "donut",
+    "learning_rate": 3e-05,
+    "max_length": 768,
+    "seed": 0,
+    "task_cord": "<s_cord-v2>",
+    "task_invoice": "<s_factura_ar>",
+    "warmup_steps": 200
+   },
+   "qr": {
+    "hosts": [
+     "www.arca.gob.ar",
+     "www.afip.gob.ar"
+    ],
+    "max_text_bytes": 1024,
+    "path": "/fe/qr/",
+    "readers": [
+     "pyzbar",
+     "aruco"
+    ]
+   },
+   "source": {
+    "cord_commit": "7f0115a4b758a71d6473b8d085751692da2fef98",
+    "max_gt_depth": 8,
+    "max_image_pixels": 16000000
+   },
+   "synth": {
+    "cuit_serial_range": [
+     1,
+     9999
+    ],
+    "dpi": 200,
+    "file_formats": {
+     "jpeg": 0.3,
+     "pdf": 0.4,
+     "png": 0.3
+    },
+    "font_test_new": "DejaVuSerif",
+    "font_validation_new": "DejaVuSansMono-Bold",
+    "fonts_known": [
+     "DejaVuSans",
+     "DejaVuSansMono"
+    ],
+    "iva105_share": 0.2,
+    "layout_test_new": "L5",
+    "layout_validation_new": "L4",
+    "layouts_known": [
+     "L1",
+     "L2",
+     "L3"
+    ],
+    "max_lines": 12,
+    "n_train": 2000,
+    "n_validation_known": 200,
+    "n_validation_new": 100,
+    "planted_rate": 0.023,
+    "qr_cm": [
+     2.5,
+     3.0,
+     4.0
+    ],
+    "scan_profiles": {
+     "clean": 0.4,
+     "mild": 0.4,
+     "poor": 0.2
+    },
+    "seed_master": 11,
+    "seed_test": 303,
+    "seed_train": 101,
+    "seed_validation": 202,
+    "suppliers_known": 40,
+    "suppliers_new_test": 15,
+    "suppliers_new_validation": 8,
+    "test_per_day_known": 15,
+    "test_per_day_new": 15,
+    "usd_share": 0.1
+   }
+  },
+  "source_sha256": {
+   "arca_spec": "a6d0f71e14f282836f07834af76a975dd885386bf972d860878d4b44278deaac",
+   "test-00000-of-00001-9c204eb3f4e11791.parquet": "51c65f1788faff392abe2a0b55b023eb23e9be551c509138eaa3a832514224e7",
+   "train-00000-of-00004-b4aaeceff1d90ecb.parquet": "da3994eee1bf9bd3c57f0d53a72c3a6812c8696c5ba26245987949ddf73483cc",
+   "train-00001-of-00004-7dbbe248962764c5.parquet": "cce4def16a0d6a6c75f80be712f7494c56c318a8829b712f5c62650155c9e58e",
+   "train-00002-of-00004-688fe1305a55e5cc.parquet": "591e2db8fe8b1d364b054f46e8c375b7f00e72578914ba46a573b6858162cab2",
+   "train-00003-of-00004-2d0cd200555ed7fd.parquet": "1ffd9de8d6fbcee7630fd4cdfedff05b9b7fabc0fae4fc17557c5fe7cf178748",
+   "validation-00000-of-00001-cc3c5779fe22e8ca.parquet": "0d0f6dac11fdcc549de2746aa9f53136a3bc22a2a1aff2b0b847f7622ad60c15"
+  },
+  "tokenizer_sha256": "e282ea794aa0954b69d1d1b4416ba664e4a31b9a9a4b7a839270cdf2fac06110",
+  "validation_digest": "fb1294f36984d946d7deb8f8227b75340c8df9b9f47be2345fade65703fdb697"
+ },
+ "test": {
+  "as_of": "2026-10-29 00:00:00",
+  "baselines": {
+   "b0:all": {
+    "auto_post": 0,
+    "bad_post": 0,
+    "bad_post_rate": null,
+    "ci_high": null,
+    "ci_low": null,
+    "review_recall": 1.0,
+    "straight_through": 0.0
+   },
+   "b0:test_known": {
+    "auto_post": 0,
+    "bad_post": 0,
+    "bad_post_rate": null,
+    "ci_high": null,
+    "ci_low": null,
+    "review_recall": 1.0,
+    "straight_through": 0.0
+   },
+   "b0:test_new": {
+    "auto_post": 0,
+    "bad_post": 0,
+    "bad_post_rate": null,
+    "ci_high": null,
+    "ci_low": null,
+    "review_recall": 1.0,
+    "straight_through": 0.0
+   },
+   "b1:all": {
+    "auto_post": 197,
+    "bad_post": 46,
+    "bad_post_rate": 0.233502538071066,
+    "ci_high": 0.2973316379097805,
+    "ci_low": 0.1798683047315846,
+    "review_recall": 0.9580838323353293,
+    "straight_through": 0.34872979214780603
+   },
+   "b1:test_known": {
+    "auto_post": 180,
+    "bad_post": 29,
+    "bad_post_rate": 0.16111111111111112,
+    "ci_high": 0.2218057338756491,
+    "ci_low": 0.11457950211011259,
+    "review_recall": 0.9213483146067416,
+    "straight_through": 0.7156398104265402
+   },
+   "b1:test_new": {
+    "auto_post": 17,
+    "bad_post": 17,
+    "bad_post_rate": 1.0,
+    "ci_high": 1.0,
+    "ci_low": 0.8156763396284354,
+    "review_recall": 1.0,
+    "straight_through": 0.0
+   },
+   "b2:all": {
+    "auto_post": 0,
+    "bad_post": 0,
+    "bad_post_rate": null,
+    "ci_high": null,
+    "ci_low": null,
+    "review_recall": 1.0,
+    "straight_through": 0.0
+   },
+   "b2:test_known": {
+    "auto_post": 0,
+    "bad_post": 0,
+    "bad_post_rate": null,
+    "ci_high": null,
+    "ci_low": null,
+    "review_recall": 1.0,
+    "straight_through": 0.0
+   },
+   "b2:test_new": {
+    "auto_post": 0,
+    "bad_post": 0,
+    "bad_post_rate": null,
+    "ci_high": null,
+    "ci_low": null,
+    "review_recall": 1.0,
+    "straight_through": 0.0
+   },
+   "b3:all": {
+    "auto_post": 433,
+    "bad_post": 282,
+    "bad_post_rate": 0.651270207852194,
+    "ci_high": 0.6946506377177387,
+    "ci_low": 0.605229227203551,
+    "review_recall": 1.0,
+    "straight_through": 0.34872979214780603
+   },
+   "b3:test_known": {
+    "auto_post": 211,
+    "bad_post": 60,
+    "bad_post_rate": 0.2843601895734597,
+    "ci_high": 0.3486615606303295,
+    "ci_low": 0.2277705642467892,
+    "review_recall": 1.0,
+    "straight_through": 0.7156398104265402
+   },
+   "b3:test_new": {
+    "auto_post": 222,
+    "bad_post": 222,
+    "bad_post_rate": 1.0,
+    "ci_high": 1.0,
+    "ci_low": 0.9829898477516985,
+    "review_recall": 1.0,
+    "straight_through": 0.0
+   },
+   "flow:all": {
+    "auto_post": 147,
+    "bad_post": 0,
+    "bad_post_rate": 0.0,
+    "ci_high": 0.025467775467775466,
+    "ci_low": 0.0,
+    "review_recall": 1.0,
+    "straight_through": 0.3394919168591224
+   },
+   "flow:test_known": {
+    "auto_post": 147,
+    "bad_post": 0,
+    "bad_post_rate": 0.0,
+    "ci_high": 0.025467775467775466,
+    "ci_low": 0.0,
+    "review_recall": 1.0,
+    "straight_through": 0.6966824644549763
+   },
+   "flow:test_new": {
+    "auto_post": 0,
+    "bad_post": 0,
+    "bad_post_rate": null,
+    "ci_high": null,
+    "ci_low": null,
+    "review_recall": 1.0,
+    "straight_through": 0.0
+   }
+  },
+  "config_sha256": "114913c99b42d6f5a6b7a6e14eaa082f82b23d8c2452f357140475bca8978993",
+  "cord": {
+   "chosen_epoch": 4,
+   "diff": {
+    "ci_high": -2.0047534318752622,
+    "ci_low": -6.559484385225759,
+    "value": -4.185823964199585
+   },
+   "receipts": 100,
+   "ted_checkpoint": 89.57824682554079,
+   "ted_chosen": 85.39242286134116
+  },
+  "criteria": [
+   {
+    "baseline_value": 89.57824682554079,
+    "ci_high": -2.0047534318752622,
+    "ci_low": -6.559484385225759,
+    "id": "C01",
+    "passed": false,
+    "value": 85.39242286134116,
+    "verdict_es": "En la prueba de CORD (100 recibos), el modelo elegido tiene TED 85,4 y el checkpoint sin ajustar 89,6: la diferencia es −4,2 (intervalo del 95 %, −6,6 a −2,0); el límite inferior debía quedar por encima de −2,0 puntos. No se cumple."
+   },
+   {
+    "baseline_value": null,
+    "ci_high": 0.9680440979391478,
+    "ci_low": 0.9464790705817934,
+    "id": "C02",
+    "passed": true,
+    "value": 0.9585843373493976,
+    "verdict_es": "Sobre 300 facturas sintéticas de proveedores conocidos, el 95,9 % de las líneas se leyó exacto; el umbral era 90 %."
+   },
+   {
+    "baseline_value": null,
+    "ci_high": 0.0027403952058492197,
+    "ci_low": 0.0,
+    "id": "C03",
+    "passed": false,
+    "value": 0.0,
+    "verdict_es": "Sobre 300 facturas sintéticas de proveedores con un diseño nuevo, el 0 % de las líneas se leyó exacto; el umbral era 80 %. No se cumple."
+   },
+   {
+    "baseline_value": null,
+    "ci_high": null,
+    "ci_low": null,
+    "id": "C04",
+    "passed": false,
+    "value": 0.8310580204778157,
+    "verdict_es": "Entre las 586 facturas sintéticas impresas con QR intacto, el lector leyó el texto exacto de 487: 83,1 %; el umbral era 97 %. No se cumple."
+   },
+   {
+    "baseline_value": null,
+    "ci_high": 0.025467775467775466,
+    "ci_low": 0.0,
+    "id": "C05",
+    "passed": false,
+    "value": 0.0,
+    "verdict_es": "Sobre 600 facturas sintéticas, 0 de 147 cargas automáticas fue mala; el límite superior del intervalo de Wilson es 2,5 % y el máximo era 2 %. No se cumple."
+   },
+   {
+    "baseline_value": null,
+    "ci_high": null,
+    "ci_low": null,
+    "id": "C06",
+    "passed": false,
+    "value": 0.6966824644549763,
+    "verdict_es": "Sobre las facturas sintéticas limpias de proveedores conocidos, el 69,7 % (147 de 211) se cargó solo y bien; el umbral era 85 %. No se cumple."
+   },
+   {
+    "baseline_value": null,
+    "ci_high": null,
+    "ci_low": null,
+    "id": "C07",
+    "passed": true,
+    "value": 1.0,
+    "verdict_es": "De las 167 facturas sintéticas con una discrepancia sembrada, 167 de 167 fueron a revisión (100 %); el umbral era 99 %."
+   },
+   {
+    "baseline_value": 0.233502538071066,
+    "ci_high": 0.1,
+    "ci_low": 0.056666666666666664,
+    "id": "C08",
+    "passed": true,
+    "value": 0.0,
+    "verdict_es": "Sobre las facturas sintéticas de la prueba, B1 (solo el QR en dos vías) cargó mal el 23,4 % y el flujo el 0,0 %; la diferencia es 7,7 puntos (intervalo del 95 %, 5,7 a 10,0); el límite inferior debía ser mayor que 0."
+   },
+   {
+    "baseline_value": null,
+    "ci_high": null,
+    "ci_low": null,
+    "id": "C09",
+    "passed": true,
+    "value": 1.0,
+    "verdict_es": "147 de 147 cargas automáticas se leyeron de vuelta del ERP iguales a lo decidido (sintético) y repetir el último día creó 0 facturas nuevas; debían coincidir todas y no crearse ninguna."
+   },
+   {
+    "baseline_value": null,
+    "ci_high": null,
+    "ci_low": null,
+    "id": "C10",
+    "passed": null,
+    "value": null,
+    "verdict_es": "Informativo: sin umbral. Las líneas base, el recuerdo por clase sembrada, la lectura por campo, perfil y tamaño del QR y los 20 días de operación están en el resumen (0 variantes)."
+   }
+  ],
+  "metrics": {
+   "b1_minus_flow": {
+    "b1_rate": 0.233502538071066,
+    "ci_high": 0.1,
+    "ci_low": 0.056666666666666664,
+    "flow_rate": 0.0,
+    "value": 0.07666666666666666
+   },
+   "bad_post": {
+    "bad": 0,
+    "ci_high": 0.025467775467775466,
+    "ci_low": 0.0,
+    "invoices": 600,
+    "posts": 147,
+    "rate": 0.0
+   },
+   "baselines": {
+    "b0:all": {
+     "auto_post": 0,
+     "bad_post": 0,
+     "bad_post_rate": null,
+     "ci_high": null,
+     "ci_low": null,
+     "review_recall": 1.0,
+     "straight_through": 0.0
+    },
+    "b0:test_known": {
+     "auto_post": 0,
+     "bad_post": 0,
+     "bad_post_rate": null,
+     "ci_high": null,
+     "ci_low": null,
+     "review_recall": 1.0,
+     "straight_through": 0.0
+    },
+    "b0:test_new": {
+     "auto_post": 0,
+     "bad_post": 0,
+     "bad_post_rate": null,
+     "ci_high": null,
+     "ci_low": null,
+     "review_recall": 1.0,
+     "straight_through": 0.0
+    },
+    "b1:all": {
+     "auto_post": 197,
+     "bad_post": 46,
+     "bad_post_rate": 0.233502538071066,
+     "ci_high": 0.2973316379097805,
+     "ci_low": 0.1798683047315846,
+     "review_recall": 0.9580838323353293,
+     "straight_through": 0.34872979214780603
+    },
+    "b1:test_known": {
+     "auto_post": 180,
+     "bad_post": 29,
+     "bad_post_rate": 0.16111111111111112,
+     "ci_high": 0.2218057338756491,
+     "ci_low": 0.11457950211011259,
+     "review_recall": 0.9213483146067416,
+     "straight_through": 0.7156398104265402
+    },
+    "b1:test_new": {
+     "auto_post": 17,
+     "bad_post": 17,
+     "bad_post_rate": 1.0,
+     "ci_high": 1.0,
+     "ci_low": 0.8156763396284354,
+     "review_recall": 1.0,
+     "straight_through": 0.0
+    },
+    "b2:all": {
+     "auto_post": 0,
+     "bad_post": 0,
+     "bad_post_rate": null,
+     "ci_high": null,
+     "ci_low": null,
+     "review_recall": 1.0,
+     "straight_through": 0.0
+    },
+    "b2:test_known": {
+     "auto_post": 0,
+     "bad_post": 0,
+     "bad_post_rate": null,
+     "ci_high": null,
+     "ci_low": null,
+     "review_recall": 1.0,
+     "straight_through": 0.0
+    },
+    "b2:test_new": {
+     "auto_post": 0,
+     "bad_post": 0,
+     "bad_post_rate": null,
+     "ci_high": null,
+     "ci_low": null,
+     "review_recall": 1.0,
+     "straight_through": 0.0
+    },
+    "b3:all": {
+     "auto_post": 433,
+     "bad_post": 282,
+     "bad_post_rate": 0.651270207852194,
+     "ci_high": 0.6946506377177387,
+     "ci_low": 0.605229227203551,
+     "review_recall": 1.0,
+     "straight_through": 0.34872979214780603
+    },
+    "b3:test_known": {
+     "auto_post": 211,
+     "bad_post": 60,
+     "bad_post_rate": 0.2843601895734597,
+     "ci_high": 0.3486615606303295,
+     "ci_low": 0.2277705642467892,
+     "review_recall": 1.0,
+     "straight_through": 0.7156398104265402
+    },
+    "b3:test_new": {
+     "auto_post": 222,
+     "bad_post": 222,
+     "bad_post_rate": 1.0,
+     "ci_high": 1.0,
+     "ci_low": 0.9829898477516985,
+     "review_recall": 1.0,
+     "straight_through": 0.0
+    },
+    "flow:all": {
+     "auto_post": 147,
+     "bad_post": 0,
+     "bad_post_rate": 0.0,
+     "ci_high": 0.025467775467775466,
+     "ci_low": 0.0,
+     "review_recall": 1.0,
+     "straight_through": 0.3394919168591224
+    },
+    "flow:test_known": {
+     "auto_post": 147,
+     "bad_post": 0,
+     "bad_post_rate": 0.0,
+     "ci_high": 0.025467775467775466,
+     "ci_low": 0.0,
+     "review_recall": 1.0,
+     "straight_through": 0.6966824644549763
+    },
+    "flow:test_new": {
+     "auto_post": 0,
+     "bad_post": 0,
+     "bad_post_rate": null,
+     "ci_high": null,
+     "ci_low": null,
+     "review_recall": 1.0,
+     "straight_through": 0.0
+    }
+   },
+   "cord": {
+    "diff": {
+     "ci_high": -2.0047534318752622,
+     "ci_low": -6.559484385225759,
+     "value": -4.185823964199585
+    },
+    "receipts": 100,
+    "ted_checkpoint": 89.57824682554079,
+    "ted_chosen": 85.39242286134116
+   },
+   "days": 20,
+   "erp": {
+    "posts": 147,
+    "readback_equal": 147,
+    "repeat_new": 0
+   },
+   "lines": {
+    "known": {
+     "ci_high": 0.9680440979391478,
+     "ci_low": 0.9464790705817934,
+     "exact": 1273,
+     "invoices": 300,
+     "lines": 1328,
+     "rate": 0.9585843373493976
+    },
+    "new": {
+     "ci_high": 0.0027403952058492197,
+     "ci_low": 0.0,
+     "exact": 0,
+     "invoices": 300,
+     "lines": 1398,
+     "rate": 0.0
+    }
+   },
+   "qr": {
+    "intact": 586,
+    "printed": 586,
+    "rate": 0.8310580204778157,
+    "read": 487
+   },
+   "review_recall": {
+    "by_class": {
+     "credit_note": {
+      "planted": 13,
+      "review": 13
+     },
+     "currency_mismatch": {
+      "planted": 15,
+      "review": 15
+     },
+     "date_before_po": {
+      "planted": 9,
+      "review": 9
+     },
+     "duplicate": {
+      "planted": 9,
+      "review": 9
+     },
+     "extra_line": {
+      "planted": 18,
+      "review": 18
+     },
+     "no_po": {
+      "planted": 15,
+      "review": 15
+     },
+     "over_order": {
+      "planted": 13,
+      "review": 13
+     },
+     "over_receipt": {
+      "planted": 11,
+      "review": 11
+     },
+     "price_off": {
+      "planted": 12,
+      "review": 12
+     },
+     "qr_missing": {
+      "planted": 14,
+      "review": 14
+     },
+     "qr_tampered": {
+      "planted": 12,
+      "review": 12
+     },
+     "supplier_mismatch": {
+      "planted": 18,
+      "review": 18
+     },
+     "total_mismatch": {
+      "planted": 8,
+      "review": 8
+     }
+    },
+    "first_reason_ok": 67,
+    "planted": 167,
+    "rate": 1.0,
+    "review": 167
+   },
+   "straight_through": {
+    "known": {
+     "clean": 211,
+     "posted": 147,
+     "rate": 0.6966824644549763
+    },
+    "new": {
+     "clean": 222,
+     "posted": 0,
+     "rate": 0.0
+    }
+   },
+   "variants": 0
+  },
+  "operation": {
+   "days": 20,
+   "invoices": 600
+  },
+  "run_key": "20261118T235004067560Z"
+ },
+ "version": 1
+}

@@ -1,0 +1,31 @@
+{
+ "artifact_sha256": "b4cc60f85ddc0fb954e538158c1a111349818b5c00f744021a21700806cdee2e",
+ "as_of": "2026-10-29 00:00:00",
+ "attribution": "Park et al. (2019), CORD: A Consolidated Receipt Dataset for Post-OCR Parsing, Clova AI, CC BY 4.0 (https://creativecommons.org/licenses/by/4.0/), commit 7f0115a4. Las facturas, órdenes, remitos, proveedores y CUIT son sintéticos.",
+ "cord_commit": "7f0115a4b758a71d6473b8d085751692da2fef98",
+ "files": {
+  "algorithms.json": {
+   "bytes": 24221,
+   "sha256": "ba448983bb4df821739da2aaf63510a39a8f40d4db184fee78931460bedc9fab"
+  },
+  "data.json": {
+   "bytes": 4108,
+   "sha256": "e597fd86da6e72d792f353c8af176049c6e24c73ddfa2bf96f5aa916d8f54288"
+  },
+  "operation.json": {
+   "bytes": 10882,
+   "sha256": "86b30fc0b9067becbb22bc61758caa693bac0f7b455f86e9ae82e75255181334"
+  },
+  "summary.json": {
+   "bytes": 7301,
+   "sha256": "83d0a1b5b8d9228927fe8fbef6d54dbfc72c0001cee6cc8498cc41212af9822d"
+  },
+  "validation_rules.json": {
+   "bytes": 4021,
+   "sha256": "23d387b9389500d9283d196dffe973df01250c17c40894608ded24e07cd240fa"
+  }
+ },
+ "run_key": "20261118T235004067560Z",
+ "schema_version": 1,
+ "synthetic_note_es": "Las facturas, órdenes, remitos, proveedores y CUIT son sintéticos; los recibos de CORD son reales."
+}

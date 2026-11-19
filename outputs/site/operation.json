@@ -1,0 +1,518 @@
+{
+ "artifact_sha256": "b4cc60f85ddc0fb954e538158c1a111349818b5c00f744021a21700806cdee2e",
+ "as_of": "2026-10-29 00:00:00",
+ "attribution": "Park et al. (2019), CORD: A Consolidated Receipt Dataset for Post-OCR Parsing, Clova AI, CC BY 4.0 (https://creativecommons.org/licenses/by/4.0/), commit 7f0115a4. Las facturas, órdenes, remitos, proveedores y CUIT son sintéticos.",
+ "cord_commit": "7f0115a4b758a71d6473b8d085751692da2fef98",
+ "days": [
+  {
+   "auto_post": 9,
+   "by_reason": {
+    "extraction_incomplete": 11,
+    "line_arithmetic": 2,
+    "line_not_on_po": 1,
+    "qr_not_read": 5,
+    "qty_over_receipt": 1,
+    "unsupported_type": 1
+   },
+   "date": "2026-10-01",
+   "invoices": 30,
+   "review": 21,
+   "seconds_mean": 1.397,
+   "seconds_p95": 2.135,
+   "synthetic": true
+  },
+  {
+   "auto_post": 7,
+   "by_reason": {
+    "currency_mismatch": 2,
+    "extraction_incomplete": 13,
+    "line_arithmetic": 1,
+    "line_not_on_po": 1,
+    "qr_not_read": 4,
+    "supplier_mismatch": 1,
+    "total_arithmetic": 1
+   },
+   "date": "2026-10-02",
+   "invoices": 30,
+   "review": 23,
+   "seconds_mean": 1.335,
+   "seconds_p95": 1.989,
+   "synthetic": true
+  },
+  {
+   "auto_post": 4,
+   "by_reason": {
+    "currency_mismatch": 1,
+    "extraction_incomplete": 11,
+    "line_arithmetic": 2,
+    "qr_not_read": 11,
+    "qr_print_mismatch": 1
+   },
+   "date": "2026-10-05",
+   "invoices": 30,
+   "review": 26,
+   "seconds_mean": 1.45,
+   "seconds_p95": 1.993,
+   "synthetic": true
+  },
+  {
+   "auto_post": 6,
+   "by_reason": {
+    "currency_mismatch": 1,
+    "date_out_of_range": 1,
+    "extraction_incomplete": 13,
+    "qr_not_read": 7,
+    "qr_print_mismatch": 1,
+    "qty_over_receipt": 1
+   },
+   "date": "2026-10-06",
+   "invoices": 30,
+   "review": 24,
+   "seconds_mean": 1.362,
+   "seconds_p95": 1.845,
+   "synthetic": true
+  },
+  {
+   "auto_post": 7,
+   "by_reason": {
+    "extraction_incomplete": 14,
+    "line_arithmetic": 2,
+    "no_po": 1,
+    "qr_not_read": 6
+   },
+   "date": "2026-10-07",
+   "invoices": 30,
+   "review": 23,
+   "seconds_mean": 1.33,
+   "seconds_p95": 2.024,
+   "synthetic": true
+  },
+  {
+   "auto_post": 9,
+   "by_reason": {
+    "date_out_of_range": 1,
+    "duplicate": 1,
+    "extraction_incomplete": 12,
+    "line_arithmetic": 1,
+    "qr_not_read": 4,
+    "supplier_mismatch": 1,
+    "unsupported_type": 1
+   },
+   "date": "2026-10-08",
+   "invoices": 30,
+   "review": 21,
+   "seconds_mean": 1.27,
+   "seconds_p95": 1.898,
+   "synthetic": true
+  },
+  {
+   "auto_post": 8,
+   "by_reason": {
+    "currency_mismatch": 1,
+    "extraction_incomplete": 15,
+    "no_po": 1,
+    "qr_not_read": 4,
+    "unsupported_type": 1
+   },
+   "date": "2026-10-09",
+   "invoices": 30,
+   "review": 22,
+   "seconds_mean": 1.383,
+   "seconds_p95": 2.016,
+   "synthetic": true
+  },
+  {
+   "auto_post": 9,
+   "by_reason": {
+    "currency_mismatch": 1,
+    "date_out_of_range": 1,
+    "extraction_incomplete": 14,
+    "line_arithmetic": 1,
+    "qr_not_read": 3,
+    "qr_print_mismatch": 1
+   },
+   "date": "2026-10-12",
+   "invoices": 30,
+   "review": 21,
+   "seconds_mean": 1.577,
+   "seconds_p95": 2.3,
+   "synthetic": true
+  },
+  {
+   "auto_post": 7,
+   "by_reason": {
+    "currency_mismatch": 1,
+    "extraction_incomplete": 13,
+    "price_out_of_tolerance": 1,
+    "qr_not_read": 7,
+    "qty_over_receipt": 1
+   },
+   "date": "2026-10-13",
+   "invoices": 30,
+   "review": 23,
+   "seconds_mean": 1.392,
+   "seconds_p95": 2.169,
+   "synthetic": true
+  },
+  {
+   "auto_post": 5,
+   "by_reason": {
+    "extraction_incomplete": 15,
+    "line_arithmetic": 1,
+    "line_not_on_po": 1,
+    "qr_not_read": 5,
+    "qty_over_receipt": 1,
+    "total_arithmetic": 1,
+    "unsupported_type": 1
+   },
+   "date": "2026-10-14",
+   "invoices": 30,
+   "review": 25,
+   "seconds_mean": 1.448,
+   "seconds_p95": 2.245,
+   "synthetic": true
+  },
+  {
+   "auto_post": 6,
+   "by_reason": {
+    "duplicate": 1,
+    "extraction_incomplete": 12,
+    "line_arithmetic": 1,
+    "qr_not_read": 8,
+    "supplier_mismatch": 2
+   },
+   "date": "2026-10-15",
+   "invoices": 30,
+   "review": 24,
+   "seconds_mean": 1.411,
+   "seconds_p95": 2.0,
+   "synthetic": true
+  },
+  {
+   "auto_post": 10,
+   "by_reason": {
+    "extraction_incomplete": 11,
+    "line_arithmetic": 1,
+    "qr_not_read": 8
+   },
+   "date": "2026-10-16",
+   "invoices": 30,
+   "review": 20,
+   "seconds_mean": 1.35,
+   "seconds_p95": 1.965,
+   "synthetic": true
+  },
+  {
+   "auto_post": 8,
+   "by_reason": {
+    "extraction_incomplete": 13,
+    "line_not_on_po": 2,
+    "qr_not_read": 4,
+    "qr_print_mismatch": 1,
+    "qty_over_receipt": 1,
+    "supplier_mismatch": 1
+   },
+   "date": "2026-10-19",
+   "invoices": 30,
+   "review": 22,
+   "seconds_mean": 1.351,
+   "seconds_p95": 1.85,
+   "synthetic": true
+  },
+  {
+   "auto_post": 7,
+   "by_reason": {
+    "extraction_incomplete": 13,
+    "line_arithmetic": 1,
+    "line_not_on_po": 1,
+    "qr_not_read": 5,
+    "qr_print_mismatch": 1,
+    "qty_over_receipt": 1,
+    "total_arithmetic": 1
+   },
+   "date": "2026-10-20",
+   "invoices": 30,
+   "review": 23,
+   "seconds_mean": 1.389,
+   "seconds_p95": 2.046,
+   "synthetic": true
+  },
+  {
+   "auto_post": 9,
+   "by_reason": {
+    "extraction_incomplete": 12,
+    "line_not_on_po": 1,
+    "qr_not_read": 7,
+    "qr_print_mismatch": 1
+   },
+   "date": "2026-10-21",
+   "invoices": 30,
+   "review": 21,
+   "seconds_mean": 1.377,
+   "seconds_p95": 1.871,
+   "synthetic": true
+  },
+  {
+   "auto_post": 8,
+   "by_reason": {
+    "date_out_of_range": 1,
+    "extraction_incomplete": 14,
+    "qr_not_read": 5,
+    "qty_over_receipt": 1,
+    "unsupported_type": 1
+   },
+   "date": "2026-10-22",
+   "invoices": 30,
+   "review": 22,
+   "seconds_mean": 1.455,
+   "seconds_p95": 2.097,
+   "synthetic": true
+  },
+  {
+   "auto_post": 7,
+   "by_reason": {
+    "extraction_incomplete": 13,
+    "line_arithmetic": 2,
+    "line_not_on_po": 1,
+    "no_po": 1,
+    "qr_not_read": 3,
+    "qr_print_mismatch": 1,
+    "qty_over_receipt": 1,
+    "unsupported_type": 1
+   },
+   "date": "2026-10-23",
+   "invoices": 30,
+   "review": 23,
+   "seconds_mean": 1.425,
+   "seconds_p95": 2.252,
+   "synthetic": true
+  },
+  {
+   "auto_post": 7,
+   "by_reason": {
+    "extraction_incomplete": 13,
+    "line_arithmetic": 1,
+    "no_po": 1,
+    "qr_not_read": 7,
+    "supplier_mismatch": 1
+   },
+   "date": "2026-10-26",
+   "invoices": 30,
+   "review": 23,
+   "seconds_mean": 1.388,
+   "seconds_p95": 2.105,
+   "synthetic": true
+  },
+  {
+   "auto_post": 6,
+   "by_reason": {
+    "extraction_incomplete": 13,
+    "line_arithmetic": 1,
+    "line_not_on_po": 1,
+    "no_po": 1,
+    "qr_not_read": 7,
+    "qty_over_receipt": 1
+   },
+   "date": "2026-10-27",
+   "invoices": 30,
+   "review": 24,
+   "seconds_mean": 1.283,
+   "seconds_p95": 2.08,
+   "synthetic": true
+  },
+  {
+   "auto_post": 8,
+   "by_reason": {
+    "date_out_of_range": 1,
+    "extraction_incomplete": 15,
+    "price_out_of_tolerance": 1,
+    "qr_not_read": 3,
+    "qr_print_mismatch": 2
+   },
+   "date": "2026-10-28",
+   "invoices": 30,
+   "review": 22,
+   "seconds_mean": 1.213,
+   "seconds_p95": 2.015,
+   "synthetic": true
+  }
+ ],
+ "erp": {
+  "already_posted": 0,
+  "post_failed": 0,
+  "posted": 147,
+  "readback_equal": 147,
+  "synthetic": true
+ },
+ "review_mix": [
+  {
+   "by_reason": {
+    "extraction_incomplete": 5,
+    "qr_not_read": 2,
+    "unsupported_type": 6
+   },
+   "label_es": "Nota de crédito",
+   "planted": "credit_note",
+   "synthetic": true
+  },
+  {
+   "by_reason": {
+    "currency_mismatch": 7,
+    "extraction_incomplete": 5,
+    "qr_not_read": 3
+   },
+   "label_es": "Moneda distinta",
+   "planted": "currency_mismatch",
+   "synthetic": true
+  },
+  {
+   "by_reason": {
+    "date_out_of_range": 5,
+    "extraction_incomplete": 4
+   },
+   "label_es": "Fecha anterior a la orden",
+   "planted": "date_before_po",
+   "synthetic": true
+  },
+  {
+   "by_reason": {
+    "duplicate": 2,
+    "extraction_incomplete": 5,
+    "qr_not_read": 2
+   },
+   "label_es": "Comprobante duplicado",
+   "planted": "duplicate",
+   "synthetic": true
+  },
+  {
+   "by_reason": {
+    "extraction_incomplete": 7,
+    "line_not_on_po": 8,
+    "qr_not_read": 3
+   },
+   "label_es": "Línea de más",
+   "planted": "extra_line",
+   "synthetic": true
+  },
+  {
+   "by_reason": {
+    "extraction_incomplete": 7,
+    "no_po": 3,
+    "qr_not_read": 1,
+    "qr_print_mismatch": 4
+   },
+   "label_es": "Sin orden de compra",
+   "planted": "no_po",
+   "synthetic": true
+  },
+  {
+   "by_reason": {
+    "extraction_incomplete": 198,
+    "line_arithmetic": 13,
+    "line_not_on_po": 1,
+    "no_po": 2,
+    "qr_not_read": 69,
+    "qr_print_mismatch": 1,
+    "supplier_mismatch": 1,
+    "total_arithmetic": 1
+   },
+   "label_es": "Sin discrepancia",
+   "planted": "none",
+   "synthetic": true
+  },
+  {
+   "by_reason": {
+    "extraction_incomplete": 4,
+    "qr_not_read": 4,
+    "qty_over_receipt": 5
+   },
+   "label_es": "Más de lo pedido",
+   "planted": "over_order",
+   "synthetic": true
+  },
+  {
+   "by_reason": {
+    "extraction_incomplete": 1,
+    "line_arithmetic": 3,
+    "qr_not_read": 3,
+    "qty_over_receipt": 4
+   },
+   "label_es": "Más de lo recibido",
+   "planted": "over_receipt",
+   "synthetic": true
+  },
+  {
+   "by_reason": {
+    "extraction_incomplete": 5,
+    "line_arithmetic": 1,
+    "price_out_of_tolerance": 2,
+    "qr_not_read": 4
+   },
+   "label_es": "Precio fuera de la orden",
+   "planted": "price_off",
+   "synthetic": true
+  },
+  {
+   "by_reason": {
+    "qr_not_read": 14
+   },
+   "label_es": "Sin QR",
+   "planted": "qr_missing",
+   "synthetic": true
+  },
+  {
+   "by_reason": {
+    "extraction_incomplete": 6,
+    "qr_not_read": 2,
+    "qr_print_mismatch": 4
+   },
+   "label_es": "QR alterado",
+   "planted": "qr_tampered",
+   "synthetic": true
+  },
+  {
+   "by_reason": {
+    "extraction_incomplete": 8,
+    "qr_not_read": 5,
+    "supplier_mismatch": 5
+   },
+   "label_es": "Proveedor distinto",
+   "planted": "supplier_mismatch",
+   "synthetic": true
+  },
+  {
+   "by_reason": {
+    "extraction_incomplete": 5,
+    "qr_not_read": 1,
+    "total_arithmetic": 2
+   },
+   "label_es": "Total que no cierra",
+   "planted": "total_mismatch",
+   "synthetic": true
+  }
+ ],
+ "run_key": "20261118T235004067560Z",
+ "schema_version": 1,
+ "smoke_erpnext": {
+  "documents": {
+   "invoices": 2,
+   "items": 2,
+   "orders": 1,
+   "receipts": 1,
+   "suppliers": 1
+  },
+  "duplicate_bill_no": {
+   "default_settings_creates_a_duplicate": true,
+   "status_with_uniqueness_on": 417
+  },
+  "erpnext_version": "15.124.4",
+  "frappe_version": "15.126.0",
+  "image": "frappe/erpnext:v15.124.4",
+  "image_digest": "sha256:656ccfd15dd98a184f1874f5b3797d31386c3d54a18def64c9594c7588ab55d7",
+  "readback_equal": true,
+  "repost_creates_none": true,
+  "synthetic": true,
+  "tested_on": "2026-11-18"
+ },
+ "synthetic_note_es": "Las facturas, órdenes, remitos, proveedores y CUIT son sintéticos; los recibos de CORD son reales."
+}

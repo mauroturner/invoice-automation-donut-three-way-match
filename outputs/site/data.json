@@ -1,0 +1,211 @@
+{
+ "artifact_sha256": "b4cc60f85ddc0fb954e538158c1a111349818b5c00f744021a21700806cdee2e",
+ "as_of": "2026-10-29 00:00:00",
+ "attribution": "Park et al. (2019), CORD: A Consolidated Receipt Dataset for Post-OCR Parsing, Clova AI, CC BY 4.0 (https://creativecommons.org/licenses/by/4.0/), commit 7f0115a4. Las facturas, órdenes, remitos, proveedores y CUIT son sintéticos.",
+ "cord": {
+  "fields_present": {
+   "menu": 1.0,
+   "sub_total": 0.683,
+   "total": 0.998
+  },
+  "lines_median": 2.0,
+  "menu_forms": {
+   "list": 508,
+   "object": 392
+  },
+  "missing_fields_es": [
+   "proveedor",
+   "CUIT",
+   "fecha",
+   "punto de venta",
+   "número",
+   "moneda"
+  ],
+  "receipts": {
+   "test": 100,
+   "train": 800,
+   "validation": 100
+  },
+  "scope_es": "los recibos de entrenamiento y de validación; la prueba no se abre hasta el cierre",
+  "synthetic": false,
+  "totals": {
+   "missing": 23,
+   "readable": 865,
+   "unreadable": 12
+  },
+  "unique_images": 898
+ },
+ "cord_commit": "7f0115a4b758a71d6473b8d085751692da2fef98",
+ "qr_spec": [
+  {
+   "field": "ver",
+   "required": true,
+   "type": "entero"
+  },
+  {
+   "field": "fecha",
+   "required": true,
+   "type": "fecha AAAA-MM-DD"
+  },
+  {
+   "field": "cuit",
+   "required": true,
+   "type": "entero de 11 dígitos"
+  },
+  {
+   "field": "ptoVta",
+   "required": true,
+   "type": "entero"
+  },
+  {
+   "field": "tipoCmp",
+   "required": true,
+   "type": "entero"
+  },
+  {
+   "field": "nroCmp",
+   "required": true,
+   "type": "entero"
+  },
+  {
+   "field": "importe",
+   "required": true,
+   "type": "decimal"
+  },
+  {
+   "field": "moneda",
+   "required": true,
+   "type": "texto de 3 letras"
+  },
+  {
+   "field": "ctz",
+   "required": true,
+   "type": "decimal"
+  },
+  {
+   "field": "tipoDocRec",
+   "required": false,
+   "type": "entero"
+  },
+  {
+   "field": "nroDocRec",
+   "required": false,
+   "type": "entero"
+  },
+  {
+   "field": "tipoCodAut",
+   "required": true,
+   "type": "texto (E o A)"
+  },
+  {
+   "field": "codAut",
+   "required": true,
+   "type": "entero de 14 dígitos"
+  }
+ ],
+ "run_key": "20261118T235004067560Z",
+ "schema_version": 1,
+ "synthetic": {
+  "cuit_range_es": "30-0000xxxx-d: el rango del ejemplo de la especificación de ARCA; ninguna factura sintética lleva el CUIT de una empresa",
+  "formats": {
+   "jpeg": 0.3,
+   "pdf": 0.4,
+   "png": 0.3
+  },
+  "invoices": {
+   "test_known": 300,
+   "test_new": 300,
+   "train": 2000,
+   "validation_known": 200,
+   "validation_new": 100
+  },
+  "layouts": {
+   "known": [
+    "L1",
+    "L2",
+    "L3"
+   ],
+   "test_new": "L5",
+   "validation_new": "L4"
+  },
+  "planted": [
+   {
+    "class": "price_off",
+    "count": 12,
+    "label_es": "Precio fuera de la orden"
+   },
+   {
+    "class": "over_receipt",
+    "count": 11,
+    "label_es": "Más de lo recibido"
+   },
+   {
+    "class": "over_order",
+    "count": 13,
+    "label_es": "Más de lo pedido"
+   },
+   {
+    "class": "total_mismatch",
+    "count": 8,
+    "label_es": "Total que no cierra"
+   },
+   {
+    "class": "supplier_mismatch",
+    "count": 18,
+    "label_es": "Proveedor distinto"
+   },
+   {
+    "class": "no_po",
+    "count": 15,
+    "label_es": "Sin orden de compra"
+   },
+   {
+    "class": "duplicate",
+    "count": 9,
+    "label_es": "Comprobante duplicado"
+   },
+   {
+    "class": "date_before_po",
+    "count": 9,
+    "label_es": "Fecha anterior a la orden"
+   },
+   {
+    "class": "currency_mismatch",
+    "count": 15,
+    "label_es": "Moneda distinta"
+   },
+   {
+    "class": "extra_line",
+    "count": 18,
+    "label_es": "Línea de más"
+   },
+   {
+    "class": "qr_missing",
+    "count": 14,
+    "label_es": "Sin QR"
+   },
+   {
+    "class": "qr_tampered",
+    "count": 12,
+    "label_es": "QR alterado"
+   },
+   {
+    "class": "credit_note",
+    "count": 13,
+    "label_es": "Nota de crédito"
+   }
+  ],
+  "scan_profiles": {
+   "clean": 0.4,
+   "mild": 0.4,
+   "poor": 0.2
+  },
+  "suppliers": {
+   "known": 40,
+   "new_test": 15,
+   "new_validation": 8
+  },
+  "synthetic": true
+ },
+ "synthetic_note_es": "Las facturas, órdenes, remitos, proveedores y CUIT son sintéticos; los recibos de CORD son reales."
+}

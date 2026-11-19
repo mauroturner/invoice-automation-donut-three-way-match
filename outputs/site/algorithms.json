@@ -1,0 +1,1309 @@
+{
+ "artifact_sha256": "b4cc60f85ddc0fb954e538158c1a111349818b5c00f744021a21700806cdee2e",
+ "as_of": "2026-10-29 00:00:00",
+ "attribution": "Park et al. (2019), CORD: A Consolidated Receipt Dataset for Post-OCR Parsing, Clova AI, CC BY 4.0 (https://creativecommons.org/licenses/by/4.0/), commit 7f0115a4. Las facturas, órdenes, remitos, proveedores y CUIT son sintéticos.",
+ "baselines": [
+  {
+   "auto_post": 0,
+   "bad_post": 0,
+   "bad_post_rate": null,
+   "baseline": "b0",
+   "ci_high": null,
+   "ci_low": null,
+   "cohort": "test_known",
+   "label_es": "B0: todo a revisión",
+   "review_recall": 1.0,
+   "straight_through": 0.0,
+   "synthetic": true
+  },
+  {
+   "auto_post": 0,
+   "bad_post": 0,
+   "bad_post_rate": null,
+   "baseline": "b0",
+   "ci_high": null,
+   "ci_low": null,
+   "cohort": "test_new",
+   "label_es": "B0: todo a revisión",
+   "review_recall": 1.0,
+   "straight_through": 0.0,
+   "synthetic": true
+  },
+  {
+   "auto_post": 180,
+   "bad_post": 29,
+   "bad_post_rate": 0.161,
+   "baseline": "b1",
+   "ci_high": 0.222,
+   "ci_low": 0.115,
+   "cohort": "test_known",
+   "label_es": "B1: solo el QR en dos vías",
+   "review_recall": 0.921,
+   "straight_through": 0.716,
+   "synthetic": true
+  },
+  {
+   "auto_post": 17,
+   "bad_post": 17,
+   "bad_post_rate": 1.0,
+   "baseline": "b1",
+   "ci_high": 1.0,
+   "ci_low": 0.816,
+   "cohort": "test_new",
+   "label_es": "B1: solo el QR en dos vías",
+   "review_recall": 1.0,
+   "straight_through": 0.0,
+   "synthetic": true
+  },
+  {
+   "auto_post": 0,
+   "bad_post": 0,
+   "bad_post_rate": null,
+   "baseline": "b2",
+   "ci_high": null,
+   "ci_low": null,
+   "cohort": "test_known",
+   "label_es": "B2: el checkpoint sin ajustar",
+   "review_recall": 1.0,
+   "straight_through": 0.0,
+   "synthetic": true
+  },
+  {
+   "auto_post": 0,
+   "bad_post": 0,
+   "bad_post_rate": null,
+   "baseline": "b2",
+   "ci_high": null,
+   "ci_low": null,
+   "cohort": "test_new",
+   "label_es": "B2: el checkpoint sin ajustar",
+   "review_recall": 1.0,
+   "straight_through": 0.0,
+   "synthetic": true
+  },
+  {
+   "auto_post": 211,
+   "bad_post": 60,
+   "bad_post_rate": 0.284,
+   "baseline": "b3",
+   "ci_high": 0.349,
+   "ci_low": 0.228,
+   "cohort": "test_known",
+   "label_es": "B3: el oráculo",
+   "review_recall": 1.0,
+   "straight_through": 0.716,
+   "synthetic": true
+  },
+  {
+   "auto_post": 222,
+   "bad_post": 222,
+   "bad_post_rate": 1.0,
+   "baseline": "b3",
+   "ci_high": 1.0,
+   "ci_low": 0.983,
+   "cohort": "test_new",
+   "label_es": "B3: el oráculo",
+   "review_recall": 1.0,
+   "straight_through": 0.0,
+   "synthetic": true
+  },
+  {
+   "auto_post": 147,
+   "bad_post": 0,
+   "bad_post_rate": 0.0,
+   "baseline": "flow",
+   "ci_high": 0.025,
+   "ci_low": 0.0,
+   "cohort": "test_known",
+   "label_es": "El flujo",
+   "review_recall": 1.0,
+   "straight_through": 0.697,
+   "synthetic": true
+  },
+  {
+   "auto_post": 0,
+   "bad_post": 0,
+   "bad_post_rate": null,
+   "baseline": "flow",
+   "ci_high": null,
+   "ci_low": null,
+   "cohort": "test_new",
+   "label_es": "El flujo",
+   "review_recall": 1.0,
+   "straight_through": 0.0,
+   "synthetic": true
+  }
+ ],
+ "checkpoint_on_invoices": {
+  "cohorts": [
+   {
+    "auto_post": 0,
+    "bad_post": 0,
+    "bad_post_rate": null,
+    "baseline": "b2",
+    "ci_high": null,
+    "ci_low": null,
+    "cohort": "test_known",
+    "label_es": "B2: el checkpoint sin ajustar",
+    "review_recall": 1.0,
+    "straight_through": 0.0,
+    "synthetic": true
+   },
+   {
+    "auto_post": 0,
+    "bad_post": 0,
+    "bad_post_rate": null,
+    "baseline": "b2",
+    "ci_high": null,
+    "ci_low": null,
+    "cohort": "test_new",
+    "label_es": "B2: el checkpoint sin ajustar",
+    "review_recall": 1.0,
+    "straight_through": 0.0,
+    "synthetic": true
+   }
+  ],
+  "synthetic": true
+ },
+ "choice": [
+  {
+   "chosen": false,
+   "cord_val_ted": 87.98,
+   "epoch": 2,
+   "exact_known": 0.938,
+   "exact_new": 0.0,
+   "fit_splits": "cord_train+synth_train",
+   "status": "dropped_cord",
+   "synthetic": true
+  },
+  {
+   "chosen": true,
+   "cord_val_ted": 92.78,
+   "epoch": 4,
+   "exact_known": 0.971,
+   "exact_new": 0.0,
+   "fit_splits": "cord_train+synth_train",
+   "status": "kept",
+   "synthetic": true
+  },
+  {
+   "chosen": false,
+   "cord_val_ted": 91.98,
+   "epoch": 6,
+   "exact_known": 0.968,
+   "exact_new": 0.0,
+   "fit_splits": "cord_train+synth_train",
+   "status": "dropped_cord",
+   "synthetic": true
+  }
+ ],
+ "cord": {
+  "diff": {
+   "ci_high": -2.0,
+   "ci_low": -6.56,
+   "value": -4.19
+  },
+  "models": {
+   "checkpoint": {
+    "fit_splits": "checkpoint",
+    "leaf_recall": 0.852,
+    "receipts": 100,
+    "ted": 89.58
+   },
+   "chosen": {
+    "fit_splits": "cord_train+synth_train",
+    "leaf_recall": 0.842,
+    "receipts": 100,
+    "ted": 85.39
+   }
+  },
+  "note_es": "La prueba de CORD (recibos reales) se abre una sola vez, en el cierre. El checkpoint publicado ya se había medido sobre ella en la investigación (D42): esa cifra no es una medida independiente del ajuste.",
+  "receipts": 100,
+  "synthetic": false,
+  "ted_checkpoint": 89.58,
+  "ted_chosen": 85.39
+ },
+ "cord_commit": "7f0115a4b758a71d6473b8d085751692da2fef98",
+ "example_invoice": {
+  "invoice_key": "test_known-00011",
+  "layout": "L1",
+  "lines": 3,
+  "planted": "none",
+  "split": "test_known",
+  "synthetic": true,
+  "texts": [
+   {
+    "box": [
+     0.3615,
+     0.0162,
+     0.6385,
+     0.0235
+    ],
+    "text": "DOCUMENTO SINTÉTICO — SIN VALIDEZ FISCAL"
+   },
+   {
+    "box": [
+     0.4867,
+     0.0453,
+     0.5133,
+     0.0654
+    ],
+    "text": "A"
+   },
+   {
+    "box": [
+     0.48,
+     0.071,
+     0.52,
+     0.0761
+    ],
+    "text": "COD. 01"
+   },
+   {
+    "box": [
+     0.0647,
+     0.0483,
+     0.3791,
+     0.0628
+    ],
+    "text": "Insumos Cuyana S.A. (ficticio)"
+   },
+   {
+    "box": [
+     0.0647,
+     0.0761,
+     0.2195,
+     0.0838
+    ],
+    "text": "CUIT: 30-00009524-5"
+   },
+   {
+    "box": [
+     0.0647,
+     0.0928,
+     0.2297,
+     0.1013
+    ],
+    "text": "IVA Responsable Inscripto"
+   },
+   {
+    "box": [
+     0.5641,
+     0.0492,
+     0.6771,
+     0.062
+    ],
+    "text": "FACTURA"
+   },
+   {
+    "box": [
+     0.5641,
+     0.0761,
+     0.9051,
+     0.0859
+    ],
+    "text": "Punto de Venta: 00011   Comp. Nro: 00003311"
+   },
+   {
+    "box": [
+     0.5641,
+     0.0958,
+     0.7848,
+     0.1047
+    ],
+    "text": "Fecha de Emisión: 01/10/2026"
+   },
+   {
+    "box": [
+     0.0647,
+     0.1334,
+     0.5369,
+     0.1432
+    ],
+    "text": "Cliente: Comprador Ejemplo (ficticio) S.A.   CUIT: 30-00002895-5"
+   },
+   {
+    "box": [
+     0.0647,
+     0.1509,
+     0.5834,
+     0.1612
+    ],
+    "text": "Orden de compra: OC-2026-003345   Moneda: DOL  Cotización: 866,88"
+   },
+   {
+    "box": [
+     0.0562,
+     0.1954,
+     0.107,
+     0.2056
+    ],
+    "text": "Código"
+   },
+   {
+    "box": [
+     0.153,
+     0.1954,
+     0.2382,
+     0.2056
+    ],
+    "text": "Descripción"
+   },
+   {
+    "box": [
+     0.5254,
+     0.1958,
+     0.5641,
+     0.2035
+    ],
+    "text": "Cant."
+   },
+   {
+    "box": [
+     0.5804,
+     0.1958,
+     0.5961,
+     0.2035
+    ],
+    "text": "U."
+   },
+   {
+    "box": [
+     0.7213,
+     0.1958,
+     0.7739,
+     0.2035
+    ],
+    "text": "P. Unit."
+   },
+   {
+    "box": [
+     0.8827,
+     0.1958,
+     0.9432,
+     0.2035
+    ],
+    "text": "Subtotal"
+   },
+   {
+    "box": [
+     0.0562,
+     0.2215,
+     0.1252,
+     0.2287
+    ],
+    "text": "ART-0132"
+   },
+   {
+    "box": [
+     0.153,
+     0.221,
+     0.3869,
+     0.2309
+    ],
+    "text": "Carpeta archivadora estándar x 5"
+   },
+   {
+    "box": [
+     0.5459,
+     0.2215,
+     0.5641,
+     0.2287
+    ],
+    "text": "25"
+   },
+   {
+    "box": [
+     0.5804,
+     0.2232,
+     0.5895,
+     0.2287
+    ],
+    "text": "u"
+   },
+   {
+    "box": [
+     0.7334,
+     0.2215,
+     0.7739,
+     0.23
+    ],
+    "text": "10,24"
+   },
+   {
+    "box": [
+     0.8936,
+     0.2215,
+     0.9432,
+     0.23
+    ],
+    "text": "256,00"
+   },
+   {
+    "box": [
+     0.0562,
+     0.242,
+     0.1252,
+     0.2493
+    ],
+    "text": "ART-0069"
+   },
+   {
+    "box": [
+     0.153,
+     0.242,
+     0.3307,
+     0.2493
+    ],
+    "text": "Lavandina reforzado x 25"
+   },
+   {
+    "box": [
+     0.5459,
+     0.242,
+     0.5641,
+     0.2493
+    ],
+    "text": "13"
+   },
+   {
+    "box": [
+     0.5804,
+     0.242,
+     0.584,
+     0.2493
+    ],
+    "text": "l"
+   },
+   {
+    "box": [
+     0.7334,
+     0.242,
+     0.7739,
+     0.2505
+    ],
+    "text": "17,27"
+   },
+   {
+    "box": [
+     0.8936,
+     0.242,
+     0.9432,
+     0.2505
+    ],
+    "text": "224,51"
+   },
+   {
+    "box": [
+     0.0562,
+     0.2625,
+     0.1252,
+     0.2698
+    ],
+    "text": "ART-0032"
+   },
+   {
+    "box": [
+     0.153,
+     0.2621,
+     0.3482,
+     0.2698
+    ],
+    "text": "Cinta adhesiva estándar x 5"
+   },
+   {
+    "box": [
+     0.5459,
+     0.2625,
+     0.5641,
+     0.2698
+    ],
+    "text": "44"
+   },
+   {
+    "box": [
+     0.5804,
+     0.2642,
+     0.5895,
+     0.2698
+    ],
+    "text": "u"
+   },
+   {
+    "box": [
+     0.7424,
+     0.2625,
+     0.7739,
+     0.2711
+    ],
+    "text": "5,00"
+   },
+   {
+    "box": [
+     0.8936,
+     0.2625,
+     0.9432,
+     0.2711
+    ],
+    "text": "220,00"
+   },
+   {
+    "box": [
+     0.6445,
+     0.5152,
+     0.9353,
+     0.5267
+    ],
+    "text": "Importe Neto Gravado: US$ 700,51"
+   },
+   {
+    "box": [
+     0.7557,
+     0.5361,
+     0.9353,
+     0.5464
+    ],
+    "text": "IVA 10,5%: US$ 73,55"
+   },
+   {
+    "box": [
+     0.6802,
+     0.5609,
+     0.9353,
+     0.5746
+    ],
+    "text": "Importe Total: US$ 774,06"
+   },
+   {
+    "box": [
+     0.2709,
+     0.8217,
+     0.4595,
+     0.8294
+    ],
+    "text": "CAE N°: 90791319756292"
+   },
+   {
+    "box": [
+     0.2709,
+     0.8384,
+     0.4595,
+     0.8461
+    ],
+    "text": "Vencimiento CAE: 11/10/2026"
+   },
+   {
+    "box": [
+     0.2709,
+     0.8551,
+     0.4982,
+     0.864
+    ],
+    "text": "Comprobante Autorizado (sintético)"
+   }
+  ]
+ },
+ "fields": [
+  {
+   "cohort": "test_known",
+   "correct": 299,
+   "field": "header.cae",
+   "label_es": "CAE",
+   "leaves": 299,
+   "recall": 1.0,
+   "synthetic": true
+  },
+  {
+   "cohort": "test_known",
+   "correct": 298,
+   "field": "header.cuit_emisor",
+   "label_es": "CUIT del emisor",
+   "leaves": 299,
+   "recall": 0.997,
+   "synthetic": true
+  },
+  {
+   "cohort": "test_known",
+   "correct": 299,
+   "field": "header.cuit_receptor",
+   "label_es": "CUIT del receptor",
+   "leaves": 299,
+   "recall": 1.0,
+   "synthetic": true
+  },
+  {
+   "cohort": "test_known",
+   "correct": 298,
+   "field": "header.fecha",
+   "label_es": "Fecha",
+   "leaves": 298,
+   "recall": 1.0,
+   "synthetic": true
+  },
+  {
+   "cohort": "test_known",
+   "correct": 296,
+   "field": "header.moneda",
+   "label_es": "Moneda",
+   "leaves": 296,
+   "recall": 1.0,
+   "synthetic": true
+  },
+  {
+   "cohort": "test_known",
+   "correct": 296,
+   "field": "header.nro",
+   "label_es": "Número",
+   "leaves": 296,
+   "recall": 1.0,
+   "synthetic": true
+  },
+  {
+   "cohort": "test_known",
+   "correct": 295,
+   "field": "header.orden_compra",
+   "label_es": "Orden de compra",
+   "leaves": 296,
+   "recall": 0.997,
+   "synthetic": true
+  },
+  {
+   "cohort": "test_known",
+   "correct": 299,
+   "field": "header.pto_vta",
+   "label_es": "Punto de venta",
+   "leaves": 299,
+   "recall": 1.0,
+   "synthetic": true
+  },
+  {
+   "cohort": "test_known",
+   "correct": 299,
+   "field": "header.razon_social",
+   "label_es": "Razón social",
+   "leaves": 299,
+   "recall": 1.0,
+   "synthetic": true
+  },
+  {
+   "cohort": "test_known",
+   "correct": 299,
+   "field": "header.tipo",
+   "label_es": "Tipo de comprobante",
+   "leaves": 299,
+   "recall": 1.0,
+   "synthetic": true
+  },
+  {
+   "cohort": "test_known",
+   "correct": 1318,
+   "field": "line.amount",
+   "label_es": "Importe de la línea",
+   "leaves": 1328,
+   "recall": 0.992,
+   "synthetic": true
+  },
+  {
+   "cohort": "test_known",
+   "correct": 1328,
+   "field": "line.code",
+   "label_es": "Código del artículo",
+   "leaves": 1328,
+   "recall": 1.0,
+   "synthetic": true
+  },
+  {
+   "cohort": "test_known",
+   "correct": 1328,
+   "field": "line.desc",
+   "label_es": "Descripción",
+   "leaves": 1328,
+   "recall": 1.0,
+   "synthetic": true
+  },
+  {
+   "cohort": "test_known",
+   "correct": 1328,
+   "field": "line.qty",
+   "label_es": "Cantidad",
+   "leaves": 1328,
+   "recall": 1.0,
+   "synthetic": true
+  },
+  {
+   "cohort": "test_known",
+   "correct": 1328,
+   "field": "line.unit",
+   "label_es": "Unidad",
+   "leaves": 1328,
+   "recall": 1.0,
+   "synthetic": true
+  },
+  {
+   "cohort": "test_known",
+   "correct": 1320,
+   "field": "line.unit_price",
+   "label_es": "Precio unitario",
+   "leaves": 1328,
+   "recall": 0.994,
+   "synthetic": true
+  },
+  {
+   "cohort": "test_known",
+   "correct": 57,
+   "field": "totals.iva_105",
+   "label_es": "IVA 10,5 %",
+   "leaves": 300,
+   "recall": 0.19,
+   "synthetic": true
+  },
+  {
+   "cohort": "test_known",
+   "correct": 243,
+   "field": "totals.iva_21",
+   "label_es": "IVA 21 %",
+   "leaves": 300,
+   "recall": 0.81,
+   "synthetic": true
+  },
+  {
+   "cohort": "test_known",
+   "correct": 297,
+   "field": "totals.neto",
+   "label_es": "Neto",
+   "leaves": 300,
+   "recall": 0.99,
+   "synthetic": true
+  },
+  {
+   "cohort": "test_known",
+   "correct": 299,
+   "field": "totals.total",
+   "label_es": "Total",
+   "leaves": 300,
+   "recall": 0.997,
+   "synthetic": true
+  },
+  {
+   "cohort": "test_new",
+   "correct": 199,
+   "field": "header.cae",
+   "label_es": "CAE",
+   "leaves": 219,
+   "recall": 0.909,
+   "synthetic": true
+  },
+  {
+   "cohort": "test_new",
+   "correct": 158,
+   "field": "header.cuit_emisor",
+   "label_es": "CUIT del emisor",
+   "leaves": 172,
+   "recall": 0.919,
+   "synthetic": true
+  },
+  {
+   "cohort": "test_new",
+   "correct": 1,
+   "field": "header.cuit_receptor",
+   "label_es": "CUIT del receptor",
+   "leaves": 41,
+   "recall": 0.024,
+   "synthetic": true
+  },
+  {
+   "cohort": "test_new",
+   "correct": 2,
+   "field": "header.fecha",
+   "label_es": "Fecha",
+   "leaves": 20,
+   "recall": 0.1,
+   "synthetic": true
+  },
+  {
+   "cohort": "test_new",
+   "correct": 4,
+   "field": "header.moneda",
+   "label_es": "Moneda",
+   "leaves": 5,
+   "recall": 0.8,
+   "synthetic": true
+  },
+  {
+   "cohort": "test_new",
+   "correct": 1,
+   "field": "header.nro",
+   "label_es": "Número",
+   "leaves": 3,
+   "recall": 0.333,
+   "synthetic": true
+  },
+  {
+   "cohort": "test_new",
+   "correct": 32,
+   "field": "header.orden_compra",
+   "label_es": "Orden de compra",
+   "leaves": 32,
+   "recall": 1.0,
+   "synthetic": true
+  },
+  {
+   "cohort": "test_new",
+   "correct": 25,
+   "field": "header.pto_vta",
+   "label_es": "Punto de venta",
+   "leaves": 30,
+   "recall": 0.833,
+   "synthetic": true
+  },
+  {
+   "cohort": "test_new",
+   "correct": 259,
+   "field": "header.razon_social",
+   "label_es": "Razón social",
+   "leaves": 259,
+   "recall": 1.0,
+   "synthetic": true
+  },
+  {
+   "cohort": "test_new",
+   "correct": 258,
+   "field": "header.tipo",
+   "label_es": "Tipo de comprobante",
+   "leaves": 259,
+   "recall": 0.996,
+   "synthetic": true
+  },
+  {
+   "cohort": "test_new",
+   "correct": 29,
+   "field": "line.amount",
+   "label_es": "Importe de la línea",
+   "leaves": 221,
+   "recall": 0.131,
+   "synthetic": true
+  },
+  {
+   "cohort": "test_new",
+   "correct": 568,
+   "field": "line.code",
+   "label_es": "Código del artículo",
+   "leaves": 568,
+   "recall": 1.0,
+   "synthetic": true
+  },
+  {
+   "cohort": "test_new",
+   "correct": 558,
+   "field": "line.desc",
+   "label_es": "Descripción",
+   "leaves": 564,
+   "recall": 0.989,
+   "synthetic": true
+  },
+  {
+   "cohort": "test_new",
+   "correct": 501,
+   "field": "line.qty",
+   "label_es": "Cantidad",
+   "leaves": 520,
+   "recall": 0.963,
+   "synthetic": true
+  },
+  {
+   "cohort": "test_new",
+   "correct": 663,
+   "field": "line.unit",
+   "label_es": "Unidad",
+   "leaves": 677,
+   "recall": 0.979,
+   "synthetic": true
+  },
+  {
+   "cohort": "test_new",
+   "correct": 3,
+   "field": "line.unit_price",
+   "label_es": "Precio unitario",
+   "leaves": 397,
+   "recall": 0.008,
+   "synthetic": true
+  },
+  {
+   "cohort": "test_new",
+   "correct": 1,
+   "field": "totals.iva_105",
+   "label_es": "IVA 10,5 %",
+   "leaves": 160,
+   "recall": 0.006,
+   "synthetic": true
+  },
+  {
+   "cohort": "test_new",
+   "correct": 34,
+   "field": "totals.iva_21",
+   "label_es": "IVA 21 %",
+   "leaves": 44,
+   "recall": 0.773,
+   "synthetic": true
+  },
+  {
+   "cohort": "test_new",
+   "correct": 76,
+   "field": "totals.neto",
+   "label_es": "Neto",
+   "leaves": 76,
+   "recall": 1.0,
+   "synthetic": true
+  },
+  {
+   "cohort": "test_new",
+   "correct": 111,
+   "field": "totals.total",
+   "label_es": "Total",
+   "leaves": 120,
+   "recall": 0.925,
+   "synthetic": true
+  }
+ ],
+ "match_rules": [
+  {
+   "label_es": "Archivo rechazado",
+   "rank": 1,
+   "reason": "file_rejected",
+   "rule_es": "La bandeja puso el archivo en cuarentena (V12 a V15): no hay una página que leer.",
+   "synthetic": false,
+   "tolerance": null
+  },
+  {
+   "label_es": "QR no leído",
+   "rank": 2,
+   "reason": "qr_not_read",
+   "rule_es": "Ningún lector decodificó un QR en la página.",
+   "synthetic": false,
+   "tolerance": null
+  },
+  {
+   "label_es": "QR inválido",
+   "rank": 3,
+   "reason": "qr_invalid",
+   "rule_es": "El QR se leyó pero no cumple la especificación de ARCA.",
+   "synthetic": false,
+   "tolerance": null
+  },
+  {
+   "label_es": "Lectura incompleta",
+   "rank": 4,
+   "reason": "extraction_incomplete",
+   "rule_es": "Un campo obligatorio del modelo no se pudo normalizar.",
+   "synthetic": false,
+   "tolerance": null
+  },
+  {
+   "label_es": "Tipo no soportado",
+   "rank": 5,
+   "reason": "unsupported_type",
+   "rule_es": "El tipo de comprobante no está entre los que el flujo carga.",
+   "synthetic": false,
+   "tolerance": null
+  },
+  {
+   "label_es": "El QR y lo impreso difieren",
+   "rank": 6,
+   "reason": "qr_print_mismatch",
+   "rule_es": "CUIT, punto de venta, número, fecha o total del QR no son los que se leyeron de la página.",
+   "synthetic": false,
+   "tolerance": {
+    "total_qr_tolerance": 0.01
+   }
+  },
+  {
+   "label_es": "Comprobante duplicado",
+   "rank": 7,
+   "reason": "duplicate",
+   "rule_es": "El ERP ya tiene un comprobante del mismo proveedor con ese punto de venta y número.",
+   "synthetic": false,
+   "tolerance": null
+  },
+  {
+   "label_es": "Sin orden de compra",
+   "rank": 8,
+   "reason": "no_po",
+   "rule_es": "No existe la orden de compra que la factura cita.",
+   "synthetic": false,
+   "tolerance": null
+  },
+  {
+   "label_es": "Proveedor distinto del de la orden",
+   "rank": 9,
+   "reason": "supplier_mismatch",
+   "rule_es": "El proveedor de la factura no es el de la orden.",
+   "synthetic": false,
+   "tolerance": null
+  },
+  {
+   "label_es": "Moneda distinta de la de la orden",
+   "rank": 10,
+   "reason": "currency_mismatch",
+   "rule_es": "La moneda de la factura no es la de la orden.",
+   "synthetic": false,
+   "tolerance": null
+  },
+  {
+   "label_es": "Fecha fuera de rango",
+   "rank": 11,
+   "reason": "date_out_of_range",
+   "rule_es": "La fecha no está entre la de la orden y el instante de la corrida.",
+   "synthetic": false,
+   "tolerance": null
+  },
+  {
+   "label_es": "Línea que no está en la orden",
+   "rank": 12,
+   "reason": "line_not_on_po",
+   "rule_es": "Un artículo de la factura no figura en la orden.",
+   "synthetic": false,
+   "tolerance": null
+  },
+  {
+   "label_es": "La línea no cierra",
+   "rank": 13,
+   "reason": "line_arithmetic",
+   "rule_es": "Cantidad por precio no es el importe de la línea, con la tolerancia de redondeo.",
+   "synthetic": false,
+   "tolerance": {
+    "rounding_per_line": 0.01
+   }
+  },
+  {
+   "label_es": "El total no cierra",
+   "rank": 14,
+   "reason": "total_arithmetic",
+   "rule_es": "Las líneas no suman el neto, o el neto más el IVA no es el total.",
+   "synthetic": false,
+   "tolerance": {
+    "rounding_per_line": 0.01
+   }
+  },
+  {
+   "label_es": "Precio fuera de tolerancia",
+   "rank": 15,
+   "reason": "price_out_of_tolerance",
+   "rule_es": "El precio unitario se aparta de la orden más que la tolerancia del cruce.",
+   "synthetic": false,
+   "tolerance": {
+    "price_tolerance_pct": 2.0
+   }
+  },
+  {
+   "label_es": "Cantidad mayor que lo recibido",
+   "rank": 16,
+   "reason": "qty_over_receipt",
+   "rule_es": "La cantidad facturada acumulada pasa lo recibido en los remitos hasta el día de la factura.",
+   "synthetic": false,
+   "tolerance": {
+    "qty_over_receipt": 0.0
+   }
+  },
+  {
+   "label_es": "Cantidad mayor que lo pedido",
+   "rank": 17,
+   "reason": "qty_over_order",
+   "rule_es": "La cantidad facturada acumulada pasa lo pedido en la orden.",
+   "synthetic": false,
+   "tolerance": null
+  },
+  {
+   "label_es": "Carga fallida en el ERP",
+   "rank": 18,
+   "reason": "post_failed",
+   "rule_es": "El borrador no se creó o su lectura de vuelta no coincide.",
+   "synthetic": false,
+   "tolerance": null
+  }
+ ],
+ "qr": [
+  {
+   "cohort": "test_known",
+   "printed": 37,
+   "qr_cm": 2.5,
+   "read_ok": 37,
+   "reader": "pyzbar",
+   "scan": "clean",
+   "synthetic": true
+  },
+  {
+   "cohort": "test_known",
+   "printed": 37,
+   "qr_cm": 3.0,
+   "read_ok": 37,
+   "reader": "pyzbar",
+   "scan": "clean",
+   "synthetic": true
+  },
+  {
+   "cohort": "test_known",
+   "printed": 37,
+   "qr_cm": 4.0,
+   "read_ok": 37,
+   "reader": "pyzbar",
+   "scan": "clean",
+   "synthetic": true
+  },
+  {
+   "cohort": "test_known",
+   "printed": 12,
+   "qr_cm": 2.5,
+   "read_ok": 0,
+   "reader": "none",
+   "scan": "mild",
+   "synthetic": true
+  },
+  {
+   "cohort": "test_known",
+   "printed": 39,
+   "qr_cm": 2.5,
+   "read_ok": 39,
+   "reader": "pyzbar",
+   "scan": "mild",
+   "synthetic": true
+  },
+  {
+   "cohort": "test_known",
+   "printed": 30,
+   "qr_cm": 3.0,
+   "read_ok": 30,
+   "reader": "pyzbar",
+   "scan": "mild",
+   "synthetic": true
+  },
+  {
+   "cohort": "test_known",
+   "printed": 41,
+   "qr_cm": 4.0,
+   "read_ok": 41,
+   "reader": "pyzbar",
+   "scan": "mild",
+   "synthetic": true
+  },
+  {
+   "cohort": "test_known",
+   "printed": 18,
+   "qr_cm": 2.5,
+   "read_ok": 0,
+   "reader": "none",
+   "scan": "poor",
+   "synthetic": true
+  },
+  {
+   "cohort": "test_known",
+   "printed": 23,
+   "qr_cm": 3.0,
+   "read_ok": 0,
+   "reader": "none",
+   "scan": "poor",
+   "synthetic": true
+  },
+  {
+   "cohort": "test_known",
+   "printed": 16,
+   "qr_cm": 4.0,
+   "read_ok": 16,
+   "reader": "pyzbar",
+   "scan": "poor",
+   "synthetic": true
+  },
+  {
+   "cohort": "test_new",
+   "printed": 46,
+   "qr_cm": 2.5,
+   "read_ok": 46,
+   "reader": "pyzbar",
+   "scan": "clean",
+   "synthetic": true
+  },
+  {
+   "cohort": "test_new",
+   "printed": 27,
+   "qr_cm": 3.0,
+   "read_ok": 27,
+   "reader": "pyzbar",
+   "scan": "clean",
+   "synthetic": true
+  },
+  {
+   "cohort": "test_new",
+   "printed": 47,
+   "qr_cm": 4.0,
+   "read_ok": 47,
+   "reader": "pyzbar",
+   "scan": "clean",
+   "synthetic": true
+  },
+  {
+   "cohort": "test_new",
+   "printed": 8,
+   "qr_cm": 2.5,
+   "read_ok": 0,
+   "reader": "none",
+   "scan": "mild",
+   "synthetic": true
+  },
+  {
+   "cohort": "test_new",
+   "printed": 28,
+   "qr_cm": 2.5,
+   "read_ok": 28,
+   "reader": "pyzbar",
+   "scan": "mild",
+   "synthetic": true
+  },
+  {
+   "cohort": "test_new",
+   "printed": 50,
+   "qr_cm": 3.0,
+   "read_ok": 50,
+   "reader": "pyzbar",
+   "scan": "mild",
+   "synthetic": true
+  },
+  {
+   "cohort": "test_new",
+   "printed": 33,
+   "qr_cm": 4.0,
+   "read_ok": 33,
+   "reader": "pyzbar",
+   "scan": "mild",
+   "synthetic": true
+  },
+  {
+   "cohort": "test_new",
+   "printed": 15,
+   "qr_cm": 2.5,
+   "read_ok": 0,
+   "reader": "none",
+   "scan": "poor",
+   "synthetic": true
+  },
+  {
+   "cohort": "test_new",
+   "printed": 23,
+   "qr_cm": 3.0,
+   "read_ok": 0,
+   "reader": "none",
+   "scan": "poor",
+   "synthetic": true
+  },
+  {
+   "cohort": "test_new",
+   "printed": 19,
+   "qr_cm": 4.0,
+   "read_ok": 19,
+   "reader": "pyzbar",
+   "scan": "poor",
+   "synthetic": true
+  }
+ ],
+ "run_key": "20261118T235004067560Z",
+ "schema_version": 1,
+ "synthetic_note_es": "Las facturas, órdenes, remitos, proveedores y CUIT son sintéticos; los recibos de CORD son reales."
+}
