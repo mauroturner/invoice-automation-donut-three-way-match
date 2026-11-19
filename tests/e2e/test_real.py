@@ -65,8 +65,11 @@ def outputs(cfg):
 
 
 def _runs(conn):
-    return conn.execute("SELECT p.run_key, p.started_at, p.finished_at, p.status, p.peak_working_set_mb, p.memory_counter, d.kind, p.delivery_id, p.peak_gpu_mb "
-                        "FROM pipeline_runs p LEFT JOIN deliveries d ON d.delivery_id = p.delivery_id ORDER BY p.started_at").fetchall()
+    """The runs in the order they started, each a row read by its column's name (U22b/S1: a reordered SELECT cannot shift a use)."""
+    cursor = conn.cursor()
+    cursor.row_factory = sqlite3.Row
+    return cursor.execute("SELECT p.run_key, p.started_at, p.finished_at, p.status, p.peak_working_set_mb, p.memory_counter, d.kind, p.delivery_id, p.peak_gpu_mb "
+                          "FROM pipeline_runs p LEFT JOIN deliveries d ON d.delivery_id = p.delivery_id ORDER BY p.started_at").fetchall()
 
 
 def _state(outputs, run_key: str) -> dict:
@@ -94,7 +97,7 @@ def test_real_counts_seal_and_summary_consistency(cfg, outputs):
     launch, test = seal["launch"], seal["test"]
     assert registry.read_seal(outputs["seal_path"]) == seal, "the seal is read back with the shape the code checks"
     runs = _runs(conn)
-    observed = _state(outputs, runs[0][0])["tasks"]["fetch_source"]["source_sha256"]
+    observed = _state(outputs, runs[0]["run_key"])["tasks"]["fetch_source"]["source_sha256"]
     fingerprint = registry.config_fingerprint(registry.sealed_view(cfg, observed))
     assert launch["config_sha256"] == test["config_sha256"] == fingerprint == summary["config_sha256"] == site.summary["seal"]["launch"]["config_sha256"]
     assert registry.seal_state(outputs["seal_path"], fingerprint) == "match"
@@ -106,29 +109,37 @@ def test_real_counts_seal_and_summary_consistency(cfg, outputs):
     own = {r[0]: r[1:] for r in conn.execute("SELECT criterion_id, passed, verdict_es FROM eval_criteria WHERE seal_state = 'sealed'")}
     assert sorted(own) == [c.criterion_id for c in sealed]
     for criterion, in_summary, on_site, in_seal in zip(sealed, summary["criteria"], site.summary["criteria"], test["criteria"], strict=True):
-        assert in_summary["verdict_es"] == on_site["verdict_es"] == in_seal["verdict_es"] == own[criterion.criterion_id][1] == criterion.verdict_es, criterion.criterion_id
+        told = in_summary.get("sealed_verdict_es", in_summary["verdict_es"])     # C08 is told per invoice and its sealed sentence kept beside it (D59)
+        assert told == on_site.get("sealed_verdict_es", on_site["verdict_es"]) == in_seal["verdict_es"] == own[criterion.criterion_id][1] == criterion.verdict_es, criterion.criterion_id
+        assert in_summary["verdict_es"] == on_site["verdict_es"], criterion.criterion_id
         assert in_summary["passed"] == on_site["passed"] == in_seal["passed"] == criterion.passed, criterion.criterion_id
         assert own[criterion.criterion_id][0] == (None if criterion.passed is None else int(criterion.passed)), criterion.criterion_id
     assert site.summary["seal"]["test"] == {"run_key": test["run_key"], "as_of": test["as_of"]}
     assert launch["artifact_sha256"] == site.summary["seal"]["launch"]["artifact_sha256"] == conn.execute("SELECT artifact_sha256 FROM model_registry").fetchone()[0]
 
     # The runs: the launch, the twenty daily deliveries and the close, each ok and in order, then the runs without a delivery
-    assert [r[6] for r in runs[:REPLAY_RUNS]] == ["launch"] + ["daily"] * DAILY_RUNS + ["close"] and {r[3] for r in runs[:REPLAY_RUNS]} == {"ok"}
-    assert len(runs) > REPLAY_RUNS and {r[3] for r in runs[REPLAY_RUNS:]} == {"no_delivery"}, "the run without a delivery follows the 22 runs of the replay"
-    assert (launch["run_key"], test["run_key"]) == (runs[0][0], runs[REPLAY_RUNS - 1][0])
+    assert [r["kind"] for r in runs[:REPLAY_RUNS]] == ["launch"] + ["daily"] * DAILY_RUNS + ["close"] and {r["status"] for r in runs[:REPLAY_RUNS]} == {"ok"}
+    assert len(runs) > REPLAY_RUNS and {r["status"] for r in runs[REPLAY_RUNS:]} == {"no_delivery"}, "the run without a delivery follows the 22 runs of the replay"
+    launch_state = _state(outputs, runs[0]["run_key"])
+    fit = launch_state["tasks"]["fit_model"]
+    if fit["mode"] == "launch":         # the replay that fitted and sealed: the seal's runs are this warehouse's
+        assert (launch["run_key"], test["run_key"]) == (runs[0]["run_key"], runs[REPLAY_RUNS - 1]["run_key"])
+    else:                               # a rebuild from scratch with the seal (runbook R11, D62): the sealed artifact registered again, and the close reproduced the seal
+        close = _state(outputs, runs[REPLAY_RUNS - 1]["run_key"])["tasks"]["evaluate"]
+        assert fit["mode"] == "adopt" and (close["state"], close["seal"]) == ("repeat", "unchanged")
+        assert conn.execute("SELECT trained_as_of FROM model_registry").fetchone()[0] == launch["as_of"]
     assert summary["config_sha256"] == fingerprint and conn.execute("SELECT COUNT(*) FROM deliveries WHERE status != 'loaded'").fetchone()[0] == 0
 
     # AC37 (RNF02, RNF03): the limits, from the records of the runs; the counter of every figure of memory is named
     assert not verify_site(Path(cfg.paths.site_dir)) and not verify_star_schema(outputs["powerbi"])
-    launch_state = _state(outputs, runs[0][0])
     worked = sum(task["seconds"] for task in launch_state["tasks"].values())          # the record of the launch run spans a failed attempt and its repair (run 1 of U22): what it took is what its tasks took
     assert worked <= MAX_LAUNCH_S, "el lanzamiento con el ajuste pasa de 3 h (RNF02)"
     counter = WINDOWS_COUNTER if sys.platform == "win32" else POSIX_COUNTER
-    assert {r[5] for r in runs[:REPLAY_RUNS]} == {counter} and max(r[4] for r in runs[:REPLAY_RUNS]) <= MAX_PEAK_WORKING_SET_MB, f"el pico de {counter} pasa de 16 GB (RNF03)"
-    gpu = [r[8] for r in runs[:REPLAY_RUNS] if r[8] is not None]
+    assert {r["memory_counter"] for r in runs[:REPLAY_RUNS]} == {counter} and max(r["peak_working_set_mb"] for r in runs[:REPLAY_RUNS]) <= MAX_PEAK_WORKING_SET_MB, \
+        f"el pico de {counter} pasa de 16 GB (RNF03)"
+    gpu = [r["peak_gpu_mb"] for r in runs[:REPLAY_RUNS] if r["peak_gpu_mb"] is not None]
     assert gpu and 0 < max(gpu) <= MAX_PEAK_GPU_MB, "el pico de torch.cuda.max_memory_allocated falta o pasa de 20 GB (RNF03)"
-    fit = launch_state["tasks"]["fit_model"]
-    assert fit["seconds"] <= MAX_LAUNCH_S and fit["memory_counter"] == counter and fit["peak_gpu_mb"] is not None
+    assert fit["seconds"] <= MAX_LAUNCH_S and fit["memory_counter"] == counter and (fit["peak_gpu_mb"] is not None or fit["mode"] == "adopt"), "a fit is measured on the GPU; a rebuild fits nothing"
     parquets = sorted(outputs["powerbi"].glob("*.parquet"))
     assert {p.stem for p in parquets} == {t.name for t in MODEL.tables} and max(p.stat().st_size for p in parquets) <= MAX_PARQUET_BYTES
 
@@ -146,13 +157,14 @@ def test_real_counts_seal_and_summary_consistency(cfg, outputs):
 def test_every_daily_run_takes_at_most_the_required_seconds(outputs):
     """RNF02: a daily run of 30 invoices (its thirteen tasks, from the run record) takes at most 120 s. Kept apart so that a miss of this one limit does not hide what the other test checks."""
     runs = _runs(outputs["conn"])
-    assert [r[6] for r in runs[1:1 + DAILY_RUNS]] == ["daily"] * DAILY_RUNS
-    slow = [(r[7], round(seconds(r[1], r[2]))) for r in runs[1:1 + DAILY_RUNS] if seconds(r[1], r[2]) > MAX_DAILY_S]
+    assert [r["kind"] for r in runs[1:1 + DAILY_RUNS]] == ["daily"] * DAILY_RUNS
+    slow = [(r["delivery_id"], round(seconds(r["started_at"], r["finished_at"]))) for r in runs[1:1 + DAILY_RUNS] if seconds(r["started_at"], r["finished_at"]) > MAX_DAILY_S]
     assert slow == [], "una corrida diaria pasa de 120 s (RNF02)"
 
 
 def test_the_close_with_the_test_of_cord_takes_at_most_the_required_seconds(outputs):
     """RNF02: the close, which opens CORD's test split and evaluates the synthetic test, takes at most 10 minutes. Kept apart for the same reason as the daily limit."""
     runs = _runs(outputs["conn"])
-    assert runs[REPLAY_RUNS - 1][6] == "close"
-    assert seconds(runs[REPLAY_RUNS - 1][1], runs[REPLAY_RUNS - 1][2]) <= MAX_CLOSE_S, "el cierre con la prueba de CORD pasa de 10 min (RNF02)"
+    close = runs[REPLAY_RUNS - 1]
+    assert close["kind"] == "close"
+    assert seconds(close["started_at"], close["finished_at"]) <= MAX_CLOSE_S, "el cierre con la prueba de CORD pasa de 10 min (RNF02)"

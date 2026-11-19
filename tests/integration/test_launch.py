@@ -211,3 +211,43 @@ def test_a_seal_that_cannot_be_written_leaves_no_registry_row_and_no_artifact_an
     again = launch.fit_model(ctx)
     assert again.mode == "launch" and again.seal == "written" and read_registry(ctx.conn)["artifact_sha256"] == again.artifact_sha256
 
+
+def test_a_sealed_artifact_without_its_registry_row_is_registered_again_from_the_seal_and_nothing_is_fitted(launched, tmp_path, monkeypatch):
+    """R11 and B3 of the evaluation (D62): a new warehouse beside the seal and the sealed artifact (the rebuild from scratch, or a registration that failed after the seal was written). The
+    artifact is checked against the seal's hashes and registered again with the seal's figures: the row is the launch's, nothing is fitted and the seal is not touched."""
+    ctx, result = launched
+    project = Path(tmp_path) / "project"
+    shutil.copytree(ctx.cfg.project_root, project, ignore=shutil.ignore_patterns("*.sqlite", "*.sqlite-*"))
+    fresh = context_on(project)
+    seal = Path(fresh.cfg.paths.seal)
+    before = seal.read_bytes()
+    monkeypatch.setattr(launch, "fine_tune", lambda *a, **k: pytest.fail("the sealed artifact is there: nothing is fitted"))
+    monkeypatch.setattr(launch, "load_base", lambda *a, **k: pytest.fail("no base model is loaded to register a sealed artifact"))
+    adopted = launch.fit_model(fresh)
+    assert (adopted.mode, adopted.seal, adopted.artifact_sha256, adopted.config_sha256) == ("adopt", "match", result.artifact_sha256, result.config_sha256)
+    assert [r.rule_id for r in adopted.rules] == ["M02", "M03"] and all(r.passed for r in adopted.rules)
+    assert read_registry(fresh.conn) == read_registry(ctx.conn) and seal.read_bytes() == before, "the same row as the launch's, from the seal"
+    assert launch.fit_model(fresh).mode == "verify"
+
+
+def test_an_artifact_of_the_sealed_name_whose_bytes_are_not_the_sealed_ones_is_not_registered(launched, tmp_path):
+    ctx, _ = launched
+    project = Path(tmp_path) / "project"
+    shutil.copytree(ctx.cfg.project_root, project, ignore=shutil.ignore_patterns("*.sqlite", "*.sqlite-*"))
+    fresh = context_on(project)
+    folder = next(p for p in Path(fresh.cfg.paths.models_dir).iterdir() if p.name.startswith("model-"))
+    weights = next(folder.glob("*.safetensors"))
+    weights.write_bytes(weights.read_bytes()[:-1] + b"\x00")
+    with pytest.raises(launch.LaunchError, match="R6"):
+        launch.fit_model(fresh)
+    assert fresh.conn.execute("SELECT count(*) FROM model_registry").fetchone()[0] == 0
+
+
+def context_on(project: Path):
+    """A launch context on an existing project folder (its configuration, its sources hashed) with a new, empty warehouse."""
+    from invoiceflow.config import load_config
+
+    cfg = load_config(project / "config" / "test.toml")
+    conn = warehouse.connect(cfg.paths.warehouse)
+    warehouse.apply_schema(conn)
+    return launch.LaunchContext(cfg=cfg, conn=conn, run=RunMeta("rebuild-1", datetime(2026, 11, 19)), observed=check_sources(cfg), cord_index=cord.read_index(cfg))

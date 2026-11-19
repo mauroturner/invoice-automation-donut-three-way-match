@@ -219,11 +219,15 @@ def _stamp(run: RunMeta) -> str:
 
 
 def fit_model(ctx: LaunchContext) -> LaunchResult:
-    """The task of the launch and of the runs after it (see the module)."""
+    """The task of the launch and of the runs after it (see the module). A warehouse without the model's row beside the seal of this configuration and its artifact (the rebuild from scratch of
+    runbook R11, or a registration that failed after the seal was written) registers the sealed artifact again from the seal, after checking its hashes, and fits nothing (``_adopt``, D62)."""
     view = sealed_view(ctx.cfg, ctx.observed)
     existing = read_registry(ctx.conn, MODEL_VERSION)
     if existing is not None:
         return _verify(ctx, view, existing)
+    adopted = _adopt(ctx, view)
+    if adopted is not None:
+        return adopted
     return _launch(ctx, view)
 
 
@@ -231,6 +235,36 @@ def _registry_row(trained_as_of: str, artifact_name: str, artifact_sha256: str, 
                   digest: str) -> dict[str, Any]:
     return {"model_version": MODEL_VERSION, "trained_as_of": trained_as_of, "artifact_name": artifact_name, "artifact_sha256": artifact_sha256, "tokenizer_sha256": tokenizer_sha256,
             "config_sha256": config_sha256, "chosen_epoch": chosen_epoch, "choice_json": json.dumps(figures, sort_keys=True, ensure_ascii=False), "validation_digest": digest}
+
+
+def _adopt(ctx: LaunchContext, view: SealedConfig) -> LaunchResult | None:
+    """The sealed artifact registered again from the launch part of the seal (R11, D62), or None when there is nothing to adopt: no seal, a seal of another configuration, or no folder of the
+    sealed artifact. The folder must have the sealed hashes (``ArtifactError`` otherwise, which the launch reports as an unregistered folder, R6) and the seal's figures their digest
+    (``SealError``); the row is the one the launch inserted, built from the seal: nothing is fitted, measured or written but that row."""
+    from invoiceflow.model.artifact import ArtifactError
+    from invoiceflow.registry import SealError, read_seal
+
+    document = read_seal(Path(ctx.cfg.paths.seal))
+    config_sha256 = config_fingerprint(view)
+    if document is None or document["launch"]["config_sha256"] != config_sha256:
+        return None
+    sealed = document["launch"]
+    folder = Path(ctx.cfg.paths.models_dir) / sealed["artifact_name"]
+    if not folder.is_dir():
+        return None
+    try:
+        record = verify_artifact(folder, sealed["artifact_sha256"])                                   # M02: the hashes, before anything is registered
+    except ArtifactError as error:
+        raise LaunchError(f"{sealed['artifact_name']} existe en {folder.parent.name} y el registro no lo tiene, pero no tiene las huellas del sello ({error}): un artefacto que no es el sellado "
+                          "no se adopta ni se borra; quítelo a mano (docs/runbook.md, R6)") from error
+    figures = {"choice": sealed["choice"], "checkpoint_cord_val": sealed["checkpoint_cord_val"], "oracle_validation": sealed["oracle_validation"]}
+    if record.tokenizer_sha256 != sealed["tokenizer_sha256"] or _rounded_digest(figures) != sealed["validation_digest"]:
+        raise SealError("la parte del lanzamiento del sello no es la de su artefacto (el tokenizador o la huella de las cifras de validación no coinciden): no se registra (docs/runbook.md, R7)")
+    register_model(ctx.conn, _registry_row(sealed["as_of"], sealed["artifact_name"], sealed["artifact_sha256"], sealed["tokenizer_sha256"], config_sha256, sealed["chosen_epoch"], figures,
+                                           sealed["validation_digest"]))
+    rules = [_result("M02", True, artifact=sealed["artifact_name"]), _result("M03", True, state="match")]
+    logger.info("fit_model: sealed artifact %s registered again from the seal (no fit)", sealed["artifact_sha256"][:12])
+    return LaunchResult("adopt", "match", MODEL_VERSION, config_sha256, sealed["artifact_sha256"], sealed["choice"], rules, {"model_registry": 1})
 
 
 def _keep_candidates(candidates: Path, models_dir: Path, run: RunMeta) -> Path:
@@ -346,7 +380,7 @@ def _launch(ctx: LaunchContext, view: SealedConfig) -> LaunchResult:
         except BaseException:
             shutil.rmtree(final, ignore_errors=True)                  # nothing is sealed and nothing is registered: the next launch is a launch
             raise
-        # the seal first, the registry after (A5 of the evaluation, D62): a seal that fails to be written leaves no registry row behind
+        # the seal first, the registry after (A5 of the evaluation, D62): a row that fails to be inserted leaves the sealed artifact and its seal, which the next run registers again (``_adopt``)
         register_model(ctx.conn, _registry_row(_stamp(ctx.run), artifact_name, sealed.sha256, sealed.tokenizer_sha256, config_sha256, choice.epoch, figures, digest))
     finally:
         shutil.rmtree(work, ignore_errors=True)

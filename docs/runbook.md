@@ -69,16 +69,16 @@ Tres principios valen para todo el documento:
 
 1. Sin CUDA: instalar el torch de CUDA (`python -m pip install torch==2.14.1 --index-url https://download.pytorch.org/whl/cu130`) y comprobar `torch.cuda.is_available()`.
 2. Sin memoria: cerrar lo que use la GPU; un paso de ajuste usa unos 7,4 GB con bf16 y lote 1 (`torch.cuda.max_memory_allocated`), y el límite del proyecto es 20 GB.
-3. `ModelChoiceError`: leer cada época contra el checkpoint. Cambiar la tolerancia (`cord_val_tolerance`) es otro análisis, no una corrección (R12).
+3. `ModelChoiceError`: leer cada época contra el checkpoint. Las épocas candidatas no se pierden: quedan en `data\models\.candidates-<corrida>\epoch-N`, cada una con su manifiesto de huellas, y el mensaje nombra la carpeta; ninguna se registra ni se sella, y se borran a mano cuando ya no hacen falta (D62). Cambiar la tolerancia (`cord_val_tolerance`) es otro análisis, no una corrección (R12).
 4. M06: el oráculo y el generador no coinciden; es un defecto del código, no de la corrida.
 
 ## R6 El artefacto del modelo no coincide con su huella
 
 **Síntoma.** Una tarea que lee el modelo se niega: la carpeta del artefacto no es la registrada, un archivo tiene otro SHA-256, o en la carpeta hay un archivo que el flujo no lee (`.bin`, `.pt`, `.pth`, `.pkl` o `.ckpt`).
 
-**Qué significa.** El artefacto es un `safetensors` con su huella y su `model_registry` (D13). La huella protege de un archivo cambiado, no de quien cambie el archivo y el registro a la vez. Una carpeta de artefacto que nadie registró no se adopta ni se borra sola.
+**Qué significa.** El artefacto es un `safetensors` con su huella y su `model_registry` (D13). La huella protege de un archivo cambiado, no de quien cambie el archivo y el registro a la vez. Una carpeta de artefacto que el registro no tiene se registra de nuevo solo si el sello es de esta configuración y la carpeta tiene las huellas que el sello guarda (la reconstrucción de R11, o un registro que falló después de escribir el sello; D62); cualquier otra no se adopta ni se borra sola.
 
-**Qué hacer.** No copiar ni cambiar un archivo del artefacto. Si el artefacto se perdió o se tocó, el lanzamiento se rehace desde cero con el sello (R11); si hay una carpeta que nadie registró, quitarla a mano.
+**Qué hacer.** No copiar ni cambiar un archivo del artefacto. Si el artefacto se perdió o se tocó, no se puede reconstruir sin volver a ajustar, y un ajuste nuevo en la GPU no reproduce el sello byte a byte (RNF01; el lanzamiento saldría con R7): eso es un análisis nuevo (R12). Si hay una carpeta que el sello no reconoce, quitarla a mano.
 
 ## R7 La evaluación no reproduce el sello, o la prueba se evalúa sin él
 
@@ -122,14 +122,17 @@ Tres principios valen para todo el documento:
 
 ## R11 Reconstruir desde cero
 
-**Síntoma.** El almacén no tiene las columnas que dice su definición SQL, o un archivo del flujo se perdió o se tocó.
+**Síntoma.** El almacén no tiene las columnas que dice su definición SQL, se perdió, o un archivo del flujo se perdió o se tocó, y quedan el sello (`reports\model_seal.json`) y el artefacto sellado (`data\models\model-v1-…`).
 
-**Qué significa.** Un almacén que creó una versión anterior no se migra: se reconstruye desde cero, con el sello (que no se pierde) y el manifiesto de entregas; las salidas versionadas llevan su propio `manifest.json`, que se escribe al final. Las tablas emitidas son de solo inserción, así que no se editan.
+**Qué significa.** Se reconstruye todo lo demás desde el sello, sin volver a ajustar (D62): el lanzamiento encuentra el artefacto sellado sin su fila en `model_registry`, comprueba sus huellas contra las del sello y lo registra de nuevo con las cifras del sello (la tarea `fit_model` dice `mode=adopt`); las 20 entregas diarias se regeneran con la semilla sellada y el modelo las vuelve a leer; y el cierre vuelve a abrir la prueba de CORD por el único camino que la abre y tiene que reproducir el sello (`evaluate` dice `state=repeat` y `seal=unchanged`; si no, R7). Lo único que no se reconstruye sin ajustar es el artefacto (R6). Un almacén que creó una versión anterior no se migra: se reconstruye así. Las salidas versionadas llevan su propio `manifest.json`, que la corrida escribe al final. Las tablas emitidas son de solo inserción, así que no se editan. Los tiempos y la memoria del ajuste quedan en el registro de la corrida que lo hizo: la reconstrucción no ajusta. Es para el ERP sustituto local, el modo por defecto.
 
 **Qué hacer.**
 
-1. Mover o borrar `data\warehouse\` y `data\interim\` (nunca `reports\model_seal.json` ni `data\raw\`).
-2. Volver a correr `python -m invoiceflow replay`. Con el lanzamiento ya sellado, la configuración que la huella cubre tiene que ser la misma (R7); el ajuste es la parte de más de una hora.
+1. Mover a otra carpeta, sin borrarlos hasta comprobar la reconstrucción, estos cuatro: `data\warehouse\`, `data\interim\`, `dataaw\deliveries\` (las entregas y su manifiesto) y `data\erp\` (el ERP sustituto). No mover `reports\model_seal.json`, `data\models\`, `dataaw\cord\` ni `dataawrca\`.
+2. `python -m invoiceflow replay`: el lanzamiento sin ajuste, las 20 diarias y el cierre.
+3. Comprobar que la tarea `evaluate` del cierre dice `state=repeat` y `seal=unchanged`, que `git status` muestra solo lo que depende de la corrida (las claves y las horas de las corridas, los tiempos), y correr `python -m pytest -m real_data`.
+
+Si se movió solo una parte, `replay` y `run` salen con `2` sin escribir nada y dicen qué falta mover: con el manifiesto de entregas y sin el almacén, «el manifiesto de entregas dice que … están cargadas y el almacén no las tiene»; con el ERP sustituto y sin entregas, «el ERP sustituto ya tiene … documentos». `tests/e2e/test_rebuild.py` sigue estos pasos sobre una copia del modo rápido.
 
 ## R12 Empezar un análisis nuevo: otras tolerancias, otro generador, borrar el sello
 

@@ -202,6 +202,34 @@ def _has_table(conn: sqlite3.Connection, name: str) -> bool:
     return conn.execute("SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = ?", (name,)).fetchone() is not None
 
 
+def refuse_a_state_that_does_not_agree(cfg: PipelineConfig) -> None:
+    """R11 followed in part (B3 of the evaluation, D62), refused before anything is written: a delivery manifest that says a delivery is loaded while the warehouse does not have it (the
+    warehouse was moved aside or is another one: ``replay`` would find nothing pending and do nothing), or a stand-in ERP that already has documents while no delivery was ever published (the
+    ERP of another run: the launch's delivery would be rejected with 409)."""
+    manifest = read_manifest(_manifest_path(cfg))
+    loaded = sorted(key for key, entry in manifest["deliveries"].items() if entry.get("status") == "loaded")
+    if loaded:
+        conn = _read_only(cfg)
+        try:
+            known = {row[0] for row in conn.execute("SELECT delivery_id FROM deliveries WHERE status = 'loaded'")} if _has_table(conn, "deliveries") else set()
+        finally:
+            conn.close()
+        lost = [key for key in loaded if key not in known]
+        if lost:
+            raise RunRefusedError(f"el manifiesto de entregas dice que {len(lost)} entregas están cargadas ({', '.join(lost[:3])}{'…' if len(lost) > 3 else ''}) y el almacén no las tiene: el almacén "
+                                  "se movió o es otro. Para reconstruir desde cero, mover también las entregas (raw/deliveries, con su manifiesto) y el ERP sustituto (docs/runbook.md, R11). "
+                                  "No se escribió nada.")
+    elif not manifest["deliveries"] and cfg.erp.mode == "standin" and Path(cfg.paths.erp_db).is_file():
+        erp = sqlite3.connect(f"{Path(cfg.paths.erp_db).resolve().as_uri()}?mode=ro", uri=True)
+        try:
+            documents = erp.execute("SELECT count(*) FROM docs").fetchone()[0] if _has_table(erp, "docs") else 0
+        finally:
+            erp.close()
+        if documents:
+            raise RunRefusedError(f"el ERP sustituto ya tiene {documents} documentos y no se publicó ninguna entrega: es el ERP de otra corrida, y la entrega del lanzamiento lo chocaría (409). "
+                                  "Para reconstruir desde cero, moverlo también (docs/runbook.md, R11). No se escribió nada.")
+
+
 def _has_record(ctx: RunContext) -> bool:
     conn = _read_only(ctx.cfg)
     try:
@@ -997,6 +1025,7 @@ def _select(only: list[str] | None, start: str | None) -> list[str]:
 def run_all(cfg: PipelineConfig, only: list[str] | None = None, start: str | None = None, run_key: str | None = None, *, now: datetime | None = None) -> list[dict]:
     """Run the tasks in order (all, the listed ones or from `start` on) holding the writer lock from before the first to after the last; a run with no delivery stops after ``deliver``."""
     ids = _select(only, start)
+    refuse_a_state_that_does_not_agree(cfg)
     when = (now or datetime.now(UTC)).astimezone(UTC)
     outcome = []
     with sole_writer(cfg.paths.interim_dir, "run", make_run_key(run_key if run_key is not None else when)):
@@ -1023,6 +1052,7 @@ def replay(cfg: PipelineConfig, until: str | None = None) -> list[list[dict]]:
         raise UsageError(f"--until {until}: no es una entrega del plan ({', '.join(ids)})")
     last = len(plan) - 1 if until is None else ids.index(until)
     runs: list[list[dict]] = []
+    refuse_a_state_that_does_not_agree(cfg)
     manifest = _manifest_path(cfg)
     pending = next_pending(read_manifest(manifest), plan)
     if pending is None and until is not None:      # every delivery is loaded, `until` too: the same refusal as an `until` before the next pending one
