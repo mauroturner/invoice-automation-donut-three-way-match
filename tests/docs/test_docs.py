@@ -474,7 +474,7 @@ def test_the_root_rows_of_project_07_carry_the_real_figures(project_root: Path) 
     for figure in ("−4,19", "95,9", "83,1", "487 de 586", "69,7", "147 de 211", "167 de 167", "7,7", "147 de 147", "189", "1.032", "51884acb", "15.124.4", "417", "94,00", "93,65"):
         assert figure in rows, figure
     assert rows.count("No se cumple") + rows.count("No cumple") >= 5 and all(f"C{n:02d}" in rows for n in range(1, 10)) and "PeakWorkingSetSize" in rows
-    assert "No aplicado en el sitio todavía" in rows and "invoices-erp" in rows and "Airflow" in rows and "sintétic" in rows and "@gmail" not in rows
+    assert "Aplicado en el sitio el 2026-11-19" in rows and "No aplicado" not in rows and "invoices-erp" in rows and "Airflow" in rows and "sintétic" in rows and "@gmail" not in rows
     assert "n8n" not in rows.replace("n8n por Airflow", "").replace("n8n (si algún texto lo conserva)", "") or "Airflow" in rows
     assert not LOCAL_PATH.search(rows) and "Users" not in rows
 
