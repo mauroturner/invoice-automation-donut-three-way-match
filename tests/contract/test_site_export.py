@@ -294,7 +294,10 @@ def test_the_smoke_result_of_erpnext_is_read_from_its_file_strictly_and_is_none_
     path.write_text(json.dumps(SMOKE), encoding="utf-8")
     assert site_export.read_smoke(path) == SMOKE
     for broken in ("{not json", "[]", json.dumps({**SMOKE, "extra": 1}), json.dumps({k: v for k, v in SMOKE.items() if k != "image"}), json.dumps({**SMOKE, "synthetic": False}),
-                   json.dumps({**SMOKE, "image_digest": "sha256:short"}), json.dumps({**SMOKE, "image": "C:/Users/someone/erpnext"})):
+                   json.dumps({**SMOKE, "image_digest": "sha256:short"}), json.dumps({**SMOKE, "image": "C:/Users/someone/erpnext"}),
+                   # the four shapes of a local path the guard refuses (U22a/S2): a drive with either slash, a POSIX home, a macOS home, a Windows profile without its drive
+                   json.dumps({**SMOKE, "image": "D:\\images\\erpnext"}), json.dumps({**SMOKE, "image": "/home/someone/erpnext"}), json.dumps({**SMOKE, "image": "/Users/someone/erpnext"}),
+                   json.dumps({**SMOKE, "image": "\\Users\\someone\\erpnext"})):
         path.write_text(broken, encoding="utf-8")
         with pytest.raises(SiteExportError, match="erpnext_smoke"):
             site_export.read_smoke(path)

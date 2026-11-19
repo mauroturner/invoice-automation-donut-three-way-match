@@ -35,6 +35,7 @@ import httpx
 import pytest
 
 from invoiceflow.erp.client import ErpClient, ErpEvent
+from invoiceflow.files import write_atomic
 from invoiceflow.site_export import SMOKE_FILE, read_smoke
 from invoiceflow.synth.cuit import synthetic_cuit
 
@@ -219,5 +220,5 @@ def test_two_invoices_post_as_drafts_read_back_and_do_not_duplicate(erpnext):
               "repost_creates_none": True, "duplicate_bill_no": {"default_settings_creates_a_duplicate": True, "status_with_uniqueness_on": refused.status_code}}
     target = PROJECT / "reports" / SMOKE_FILE
     target.parent.mkdir(exist_ok=True)
-    target.write_bytes((json.dumps(result, ensure_ascii=False, sort_keys=True, indent=1) + "\n").encode("utf-8"))
+    write_atomic(target, json.dumps(result, ensure_ascii=False, sort_keys=True, indent=1) + "\n")       # an interrupted run never leaves a truncated file (U22a/S1)
     assert read_smoke(target) == result

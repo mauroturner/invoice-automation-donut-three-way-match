@@ -157,17 +157,17 @@ def test_a_bad_post_is_an_auto_post_with_a_planted_discrepancy_or_a_qr_or_lines_
     clean = next(t for t in world.all_truths() if t.planted == "none" and t.qr_text is not None and len(t.lines) > 1)
     qr, fields = truth_qr(clean, world.view), truth_fields(clean)
     judge = evaluation._bad_post
-    assert judge(clean, "auto_post", qr, fields, qr) is False and judge(clean, "review", qr, fields, qr) is False, "review posts nothing, so nothing is bad"
-    assert judge(dataclasses.replace(clean, planted="duplicate"), "auto_post", qr, fields, qr) is True, "(a) an auto_post that had a discrepancy planted"
+    assert judge(clean, "auto_post", qr, fields) is False and judge(clean, "review", qr, fields) is False, "review posts nothing, so nothing is bad"
+    assert judge(dataclasses.replace(clean, planted="duplicate"), "auto_post", qr, fields) is True, "(a) an auto_post that had a discrepancy planted"
     for change in ({"importe": clean.totals.total + 1}, {"nro_cmp": clean.header.nro + 1}, {"pto_vta": clean.header.pto_vta + 1}, {"cuit": "30000000015"},
                    {"moneda": "DOL" if clean.header.moneda == "PES" else "PES"}, {"fecha": clean.header.fecha.replace(year=2025)}):
         moved = dataclasses.replace(qr, payload=dataclasses.replace(qr.payload, **change))
-        assert judge(clean, "auto_post", moved, fields, qr) is True, change
-    assert judge(clean, "auto_post", dataclasses.replace(qr, payload=None, status="not_read"), fields, qr) is True, "posted with no QR header at all"
+        assert judge(clean, "auto_post", moved, fields) is True, change
+    assert judge(clean, "auto_post", dataclasses.replace(qr, payload=None, status="not_read"), fields) is True, "posted with no QR header at all"
     off = dataclasses.replace(fields, lines=(dataclasses.replace(fields.lines[0], cantidad=fields.lines[0].cantidad + 1), *fields.lines[1:]))
-    assert judge(clean, "auto_post", qr, off, qr) is True, "(b) a line that is not the truth's"
-    assert judge(clean, "auto_post", qr, dataclasses.replace(fields, lines=fields.lines[:-1]), qr) is True, "a line missing"
-    assert judge(clean, "auto_post", qr, dataclasses.replace(fields, lines=(*fields.lines, fields.lines[0])), qr) is True, "a line of more"
+    assert judge(clean, "auto_post", qr, off) is True, "(b) a line that is not the truth's"
+    assert judge(clean, "auto_post", qr, dataclasses.replace(fields, lines=fields.lines[:-1])) is True, "a line missing"
+    assert judge(clean, "auto_post", qr, dataclasses.replace(fields, lines=(*fields.lines, fields.lines[0]))) is True, "a line of more"
     assert isinstance(InvoiceFields(), InvoiceFields)
 
 

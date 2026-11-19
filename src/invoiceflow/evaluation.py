@@ -92,7 +92,7 @@ def _payload_equal(read: QrPayload | None, truth: QrPayload | None) -> bool:
     return read is not None and truth is not None and read == truth
 
 
-def _bad_post(truth: InvoiceTruth, decision: str, qr: QrRead, fields: InvoiceFields, intact: QrRead) -> bool:
+def _bad_post(truth: InvoiceTruth, decision: str, qr: QrRead, fields: InvoiceFields) -> bool:
     """(a) an auto_post with a discrepancy planted, or (b) one whose QR header or lines are not the truth's (requirements 8.1)."""
     if decision != "auto_post":
         return False
@@ -107,10 +107,6 @@ def _bad_post(truth: InvoiceTruth, decision: str, qr: QrRead, fields: InvoiceFie
 
 def _rate(successes: int, n: int) -> float | None:
     return None if n == 0 else successes / n
-
-
-def _group(rows: Sequence[Mapping[str, Any]], pick) -> list[Mapping[str, Any]]:
-    return [r for r in rows if pick(r)]
 
 
 def _baseline_row(name: str, cohort: str, rows: Sequence[dict[str, Any]], decisions: Mapping[str, str], bad: Mapping[str, bool]) -> dict[str, Any]:
@@ -157,7 +153,7 @@ def evaluate_test(conn: Any, view: SealedConfig, master: Master, truths: Sequenc
         exact, lines = metrics.exact_lines(fields, truth.lines)
         printed = truth.qr_text is not None
         status = posts.get(truth.invoice_key, (None, None))[0]
-        is_bad = _bad_post(truth, decision, read, fields, intact)
+        is_bad = _bad_post(truth, decision, read, fields)
         posted_ok = decision == "auto_post" and not is_bad
         rows.append({"invoice_key": truth.invoice_key, "cohort": truth.split, "supplier_cohort": truth.cohort, "planted": truth.planted, "expected_decision": truth.expected_decision,
                      "decision": decision, "first_reason": first, "first_reason_ok": (first == truth.expected_reasons[0]) if truth.planted != "none" and truth.expected_reasons else None,
@@ -257,7 +253,7 @@ def _flow_judged(conn: Any, view: SealedConfig, truths: Sequence[InvoiceTruth]) 
     """The flow's issued decision by invoice and whether it is a bad post, as ``evaluate_test`` judges them."""
     issued = dict(conn.execute("SELECT invoice_key, decision FROM decisions"))
     names = {t.invoice_key: issued[t.invoice_key] for t in truths}
-    bad = {t.invoice_key: _bad_post(t, names[t.invoice_key], read_qr_row(conn, t.invoice_key), read_fields(conn, t.invoice_key), truth_qr(t, view)) for t in truths}
+    bad = {t.invoice_key: _bad_post(t, names[t.invoice_key], read_qr_row(conn, t.invoice_key), read_fields(conn, t.invoice_key)) for t in truths}
     return names, bad
 
 
@@ -308,7 +304,7 @@ def _would_be_bad(truth: InvoiceTruth, conn: Any, view: SealedConfig) -> bool:
     if truth.planted != "none":
         return True
     fields, qr = read_fields(conn, truth.invoice_key), read_qr_row(conn, truth.invoice_key)
-    return _bad_post(truth, "auto_post", qr, fields, truth_qr(truth, view))
+    return _bad_post(truth, "auto_post", qr, fields)
 
 
 def _field_rows(conn: Any, by_split: Mapping[str, Sequence[Mapping[str, Any]]]) -> list[dict[str, Any]]:
