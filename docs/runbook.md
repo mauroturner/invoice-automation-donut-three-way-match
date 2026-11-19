@@ -78,7 +78,7 @@ Tres principios valen para todo el documento:
 
 **Qué significa.** El artefacto es un `safetensors` con su huella y su `model_registry` (D13). La huella protege de un archivo cambiado, no de quien cambie el archivo y el registro a la vez. Una carpeta de artefacto que el registro no tiene se registra de nuevo solo si el sello es de esta configuración y la carpeta tiene las huellas que el sello guarda (la reconstrucción de R11, o un registro que falló después de escribir el sello; D62); cualquier otra no se adopta ni se borra sola.
 
-**Qué hacer.** No copiar ni cambiar un archivo del artefacto. Si el artefacto se perdió o se tocó, no se puede reconstruir sin volver a ajustar, y un ajuste nuevo en la GPU no reproduce el sello byte a byte (RNF01; el lanzamiento saldría con R7): eso es un análisis nuevo (R12). Si hay una carpeta que el sello no reconoce, quitarla a mano.
+**Qué hacer.** No copiar ni cambiar un archivo del artefacto. Si el artefacto se perdió o se tocó, no se puede reconstruir sin volver a ajustar, y un ajuste nuevo en la GPU no reproduce el sello byte a byte (RNF01; el lanzamiento saldría con R7): eso es un análisis nuevo (R12). Si hay una carpeta que el sello no reconoce, quitarla a mano. Si el registro falló después de escribir el sello (el artefacto sellado y el sello están, y `model_registry` no tiene la fila), retomar la corrida del lanzamiento: `python -m invoiceflow run --run-key <clave de la corrida del lanzamiento> --from fit_model` (la tarea dice `mode=adopt`). Un `replay` común no la recupera: empieza otro lanzamiento, la entrega del lanzamiento que el ERP sustituto ya tiene sale con 409 y queda otra corrida fallida.
 
 ## R7 La evaluación no reproduce el sello, o la prueba se evalúa sin él
 
@@ -86,7 +86,7 @@ Tres principios valen para todo el documento:
 
 **Qué significa.** El sello (`reports\model_seal.json`) tiene dos partes que se escriben una vez: `launch` y `test`. La prueba sintética se genera solo si hay `launch`; la prueba de CORD se abre una sola vez, en el cierre. Una evaluación con otra configuración antes de sellar se rechaza antes de escribir, y una después del sello es un `post_seal` aparte que no reemplaza nada (AC20, AC24).
 
-**Qué hacer.** No editar el sello ni los hechos sellados. Si el sello no se reproduce, hay un cambio en la configuración que la huella cubre, en la verdad sintética o en el generador: comparar `config_sha256` de la corrida con el del sello y mirar cuáles claves difieren (el mensaje nombra hasta seis). Para otro análisis con otras tolerancias, ver R12.
+**Qué hacer.** No editar el sello ni los hechos sellados. Si el sello no se reproduce, hay un cambio en la configuración que la huella cubre, en la verdad sintética o en el generador: comparar `config_sha256` de la corrida con el del sello y mirar cuáles claves difieren (el mensaje nombra hasta seis). Si `fit_model` se rehúsa a registrar de nuevo un artefacto con sus huellas selladas porque la parte `launch` del sello no es la de su artefacto (el tokenizador o la huella de las cifras de validación no coinciden), sale con `SealError` que nombra esta entrada y no escribe nada: el sello o el artefacto se tocaron, y no se registra ni se ajusta de nuevo sin pasar por R12. Para otro análisis con otras tolerancias, ver R12.
 
 ## R8 El bloqueo: otro proceso escribe, o `database is locked`
 

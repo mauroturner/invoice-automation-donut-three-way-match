@@ -263,6 +263,31 @@ def test_an_artifact_of_the_sealed_name_whose_bytes_are_not_the_sealed_ones_is_n
     assert fresh.conn.execute("SELECT count(*) FROM model_registry").fetchone()[0] == 0
 
 
+@pytest.mark.parametrize("changes, what", [
+    (lambda launch_part: launch_part.update(tokenizer_sha256="0" * 64), "the tokenizer"),
+    (lambda launch_part: launch_part["choice"]["candidates"][0].update(cord_ted=launch_part["choice"]["candidates"][0]["cord_ted"] + 1.0), "a validation figure"),
+])
+def test_a_seal_whose_launch_part_is_not_its_artifacts_is_not_registered_and_names_r7(launched, tmp_path, monkeypatch, changes, what):
+    """N4 and the last warning of the review of ``_adopt`` (D62): the artifact has the sealed hashes, but the seal's tokenizer or the digest of its validation figures is not the artifact's: the
+    launch part of the seal does not describe this artifact, so the run raises ``SealError`` naming R7, registers nothing and writes nothing. This tests behaviour that already existed (no RED)."""
+    from invoiceflow.registry import SealError
+
+    ctx, _ = launched
+    project = Path(tmp_path) / "project"
+    shutil.copytree(ctx.cfg.project_root, project, ignore=shutil.ignore_patterns("*.sqlite", "*.sqlite-*"))
+    fresh = context_on(project)
+    seal = Path(fresh.cfg.paths.seal)
+    document = json.loads(seal.read_text(encoding="utf-8"))
+    changes(document["launch"])
+    seal.write_text(json.dumps(document, indent=1, ensure_ascii=False, sort_keys=True) + "\n", encoding="utf-8")
+    seal_bytes, artifacts = seal.read_bytes(), sorted(p.name for p in Path(fresh.cfg.paths.models_dir).iterdir())
+    monkeypatch.setattr(launch, "fine_tune", lambda *a, **k: pytest.fail("a seal that does not describe the artifact is no reason to fit"))
+    with pytest.raises(SealError, match=r"no se registra.*R7"):
+        launch.fit_model(fresh)
+    assert fresh.conn.execute("SELECT count(*) FROM model_registry").fetchone()[0] == 0, what
+    assert seal.read_bytes() == seal_bytes and sorted(p.name for p in Path(fresh.cfg.paths.models_dir).iterdir()) == artifacts, "nothing is written, the artifact and the seal stay"
+
+
 def context_on(project: Path):
     """A launch context on an existing project folder (its configuration, its sources hashed) with a new, empty warehouse."""
     from invoiceflow.config import load_config

@@ -156,7 +156,7 @@ Tramo `78f5748..a4e99c3` (U14, escalada al ítem 1): aprobada con seis hallazgos
 - **W1**
   - Hallazgo: Advertencia: `register_model` confirma la fila de `model_registry` en su propia transacción antes de escribir el sello del lanzamiento; si `write_launch_seal` falla, el `except` borra solo la carpeta del artefacto y queda una fila huérfana.
   - Ubicación: `src/invoiceflow/registry.py:310`.
-  - Estado: **corregida** en `ae3f21b`: el sello se escribe antes que la fila del registro, y una fila que falta después del sello se vuelve a insertar desde el sello (`b1465c8`; A5 de la evaluación, D62).
+  - Estado: **corregida** en `ae3f21b`: el sello se escribe antes que la fila del registro, y una fila que falta después del sello se vuelve a insertar desde el sello cuando se retoma la corrida del lanzamiento con `run --run-key <lanzamiento> --from fit_model` (`b1465c8`; A5 de la evaluación, D62; `tests/e2e/test_recovery.py`).
 
 - **S2**
   - Hallazgo: Sugerencia: un `_rounded` privado importado entre módulos.

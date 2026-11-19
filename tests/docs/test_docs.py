@@ -557,7 +557,7 @@ CONTROL_BYTES = re.compile(rb"[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]")   # everything 
 
 
 def test_no_markdown_file_holds_a_control_byte(project_root: Path) -> None:
-    """N1 of the recheck: a Windows path written in a script string lost its backslashes («data\raw\» became a carriage return and "aw\\"; «\arca» a BEL) and R11 step 1 named
+    """N1 of the recheck: a Windows path written in a script string lost its backslashes («data\\raw\\» became a carriage return and «aw\\»; «\\arca» a BEL) and R11 step 1 named
     paths that do not exist. No Markdown file of the README or ``docs/`` holds a control byte other than a tab and a line break (a carriage return only as the first half of CRLF)."""
     files = [project_root / "README.md", *sorted((project_root / "docs").glob("*.md"))]
     assert len(files) >= 8
