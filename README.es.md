@@ -340,3 +340,5 @@ Recibos: Park et al. (2019), «CORD: A Consolidated Receipt Dataset for Post-OCR
 Especificación del QR: ARCA, `QRespecificaciones.pdf` (91.626 bytes, SHA-256 `a6d0f71e…`), versión 1, de la que el generador toma el formato.
 
 Las facturas, las órdenes, los remitos, los proveedores, los nombres y los CUIT son sintéticos, hechos por este proyecto, y no corresponden a ninguna empresa. Los datos crudos no se versionan: el flujo no descarga nada y exige que cada archivo tenga el tamaño y la huella fijados. Los recibos de CORD son de comercios y no se verificó que estén anonimizados, así que el proyecto no republica ninguna imagen ni recorte de CORD.
+
+El código está bajo la [licencia MIT](LICENSE); los datos de origen conservan la licencia indicada arriba.

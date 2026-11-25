@@ -357,3 +357,5 @@ Receipts: Park et al. (2019), «CORD: A Consolidated Receipt Dataset for Post-OC
 QR specification: ARCA, `QRespecificaciones.pdf`, version 1, from which the generator takes the format.
 
 The invoices, orders, receiving notes, suppliers, names and tax numbers (CUIT) are synthetic, made by this project, and belong to no company. The raw data is not versioned. The project republishes no image or crop of CORD, because nobody verified that its receipts are anonymised.
+
+The code is under the [MIT licence](LICENSE); the source data keeps the licence given above.
