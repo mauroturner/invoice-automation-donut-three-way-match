@@ -61,9 +61,17 @@ NAMED_TEST = re.compile(r"(tests/[\w/]+\.py)?::(test_\w+)")
 CUIT = re.compile(r"\b\d{2}-\d{8}-\d\b")
 
 
+def root_document(project_root: Path, name: str) -> str:
+    """A document at the portfolio's root. The project is also published on its own repository, where the test that reads it is skipped."""
+    path = project_root.parent / name
+    if not path.is_file():
+        pytest.skip(f"{name} is at the root of the portfolio, which is not here")
+    return path.read_text(encoding="utf-8")
+
+
 @pytest.fixture(scope="module")
 def readme(project_root: Path) -> str:
-    return (project_root / "README.md").read_text(encoding="utf-8")
+    return (project_root / "README.es.md").read_text(encoding="utf-8")
 
 
 @pytest.fixture(scope="module")
@@ -101,7 +109,7 @@ def decision(project_root: Path, number: int) -> str:
 
 def root_rows(project_root: Path) -> str:
     """The section of project 07 in the root ``SITE-UPDATES.md``, up to the next project or the end."""
-    text = (project_root.parent / "SITE-UPDATES.md").read_text(encoding="utf-8")
+    text = root_document(project_root, "SITE-UPDATES.md")
     assert text.count("\n## 07 ") == 1, "SITE-UPDATES.md has no section for project 07"
     return re.split(r"\n## 0[8-9] ", text.split("\n## 07 ")[1])[0]
 
@@ -119,6 +127,7 @@ def all_documents(project_root: Path, readme: str) -> dict[str, str]:
 
 
 def test_readme_headings_in_order_and_results_block_matches_summary(project_root: Path, readme: str, summary: dict) -> None:
+    check_the_english_readme(project_root, readme)
     assert readme.startswith(README_TITLE + "\n")
     assert readme.count(RESULTS_START) == 1 and readme.count(RESULTS_END) == 1
     head, rest = readme.split(RESULTS_START)
@@ -416,7 +425,7 @@ def test_the_step_by_step_names_every_unit_and_cites_commits_that_exist(project_
 def test_relative_links_and_images_point_to_files_that_exist(project_root: Path, readme: str) -> None:
     """Every relative link and image of the README and of the documents resolves, and the README links to every document of ``docs/`` that exists."""
     broken = []
-    for document in [project_root / "README.md", *sorted((project_root / "docs").glob("*.md"))]:
+    for document in [project_root / "README.md", project_root / "README.es.md", *sorted((project_root / "docs").glob("*.md"))]:
         text = document.read_text(encoding="utf-8")
         for target in [*LINK.findall(text), *IMAGE.findall(text)]:
             if not re.match(r"^(https?:|mailto:)", target) and not (document.parent / target).resolve().exists():
@@ -492,7 +501,7 @@ def test_the_root_rows_of_project_07_carry_the_real_figures(project_root: Path) 
 
 def test_the_landing_expansion_has_the_rows_of_project_07(project_root: Path) -> None:
     """D34: the nine rows U01 left owed (``PENDING_LANDING_ROWS``, now empty) name project 07, and project 07 is added to the rows of the libraries it shares."""
-    text = (project_root.parent / "LANDING-EXPANSION.md").read_text(encoding="utf-8")
+    text = root_document(project_root, "LANDING-EXPANSION.md")
     rows = {line.split("|")[1].strip(): line for line in text.splitlines() if re.match(r"^\| [^|]+ \|", line)}
     for technology in ("NumPy", "SQLite", "Apache Parquet con pyarrow", "matplotlib", "pytest", "PostgreSQL", "pydantic", "uvicorn", "httpx"):
         assert "07 Facturas" in rows[technology], technology
@@ -570,7 +579,7 @@ CONTROL_BYTES = re.compile(rb"[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]")   # everything 
 def test_no_markdown_file_holds_a_control_byte(project_root: Path) -> None:
     """N1 of the recheck: a Windows path written in a script string lost its backslashes («data\\raw\\» became a carriage return and «aw\\»; «\\arca» a BEL) and R11 step 1 named
     paths that do not exist. No Markdown file of the README or ``docs/`` holds a control byte other than a tab and a line break (a carriage return only as the first half of CRLF)."""
-    files = [project_root / "README.md", *sorted((project_root / "docs").glob("*.md"))]
+    files = [project_root / "README.md", project_root / "README.es.md", *sorted((project_root / "docs").glob("*.md"))]
     assert len(files) >= 8
     found = []
     for path in files:
@@ -579,3 +588,12 @@ def test_no_markdown_file_holds_a_control_byte(project_root: Path) -> None:
         found += [f"{path.name}: {hit.group(0)!r} at {hit.start()}" for hit in CONTROL_BYTES.finditer(data)]
         found += [f"{path.name}: {lone_cr} lone carriage return(s)"] * bool(lone_cr)
     assert found == []
+
+
+def check_the_english_readme(project_root: Path, readme: str) -> None:
+    """README.md is the page of the project in English; README.es.md is the full one, which ``docs-sync`` and the other tests check."""
+    english = (project_root / "README.md").read_text(encoding="utf-8")
+    assert "**English** · [Español](README.es.md)" in english and "[English](README.md) · **Español**" in readme
+    assert english.count("4 of 9 success criteria met") == 2 and "undefined" not in english and "@gmail" not in english
+    for target in ("docs/screenshots/dashboard.png", "docs/screenshots/demo.png", "docs/model-card.md", "docs/evaluation.md"):
+        assert f"]({target})" in english and (project_root / target).is_file(), target
