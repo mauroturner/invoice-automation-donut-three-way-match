@@ -23,7 +23,7 @@ import pytest
 
 from invoiceflow.reporting import RESULTS_END, RESULTS_START
 
-README_TITLE = "# Facturas que se cargan solas al ERP"
+README_TITLE = "# ¿Es automatizable la carga de facturas al ERP con Donut, QR y cruce de tres vías?"
 USER_NAMES = {name.lower() for name in (getpass.getuser(), Path.home().name) if name}   # this machine's user, read here and never written in a test
 EMAIL = re.compile(r"\S+@\S+")
 LOCAL_PATH = re.compile(r"[A-Za-z]:[\\/]+(?:Users|Documents and Settings)|/c/Users|Users\\|/home/\w+/")

@@ -1,4 +1,4 @@
-# Facturas que se cargan solas al ERP
+# ¿Es automatizable la carga de facturas al ERP con Donut, QR y cruce de tres vías?
 
 | | |
 | --- | --- |
